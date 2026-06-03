@@ -195,6 +195,9 @@ export default function App() {
         case "BatchNorm2d":
           setIfDiff("num_features", ch)
           break
+        case "BatchNorm1d":
+          setIfDiff("num_features", last)
+          break
         case "Linear":
           setIfDiff("in_features", last)
           break

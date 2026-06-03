@@ -19,6 +19,7 @@ export type LayerType =
   | "ResNetBasicBlock"
   | "ResNetBottleneck"
   | "BatchNorm2d"
+  | "BatchNorm1d"
   | "LayerNorm"
   | "ReLU"
   | "GELU"

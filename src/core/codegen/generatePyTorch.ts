@@ -256,6 +256,8 @@ function moduleLine(
       return `self.${moduleName} = ResNetBottleneck(${actualChannel(inference, node.id, node.params.in_channels)}, ${node.params.bottleneck_channels}, ${node.params.out_channels}, stride=${node.params.stride}, use_projection=${pyBool(node.params.use_projection)})`
     case "BatchNorm2d":
       return `self.${moduleName} = nn.BatchNorm2d(${actualChannel(inference, node.id, node.params.num_features)})`
+    case "BatchNorm1d":
+      return `self.${moduleName} = nn.BatchNorm1d(${actualLastDim(inference, node.id, node.params.num_features)})`
     case "LayerNorm":
       return `self.${moduleName} = nn.LayerNorm(${actualNormalizedShape(inference, node.id, node.params.normalized_shape)})`
     case "ReLU":

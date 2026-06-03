@@ -170,6 +170,14 @@ function inferBatchNorm2d(_node: LayerNode, input: TensorSpec): TensorSpec {
   return input
 }
 
+function inferBatchNorm1d(_node: LayerNode, input: TensorSpec): TensorSpec {
+  if (input.shape.length < 2) {
+    throw new Error("BatchNorm1d 至少需要 2D Tensor。")
+  }
+
+  return input
+}
+
 function inferLayerNorm(node: LayerNode, input: TensorSpec): TensorSpec {
   const normalizedShape = asShapeTuple(node.params.normalized_shape, [input.shape[input.shape.length - 1] as number])
 
@@ -485,6 +493,8 @@ function inferNode(node: LayerNode, inputSpecs: Array<TensorSpec | null>): Tenso
       return [inferResNetBottleneck(node, expectInput(inputSpecs[0], node.name))]
     case "BatchNorm2d":
       return [inferBatchNorm2d(node, expectInput(inputSpecs[0], node.name))]
+    case "BatchNorm1d":
+      return [inferBatchNorm1d(node, expectInput(inputSpecs[0], node.name))]
     case "LayerNorm":
       return [inferLayerNorm(node, expectInput(inputSpecs[0], node.name))]
     case "ReLU":
