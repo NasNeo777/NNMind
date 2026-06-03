@@ -1,10 +1,13 @@
-import { useEffect, useMemo, useState, startTransition, type CSSProperties } from "react"
+import { useEffect, useMemo, useRef, useState, startTransition, type CSSProperties } from "react"
 import {
   addEdge,
   Background,
   Controls,
+  type FinalConnectionState,
+  type HandleType,
   MiniMap,
   ReactFlow,
+  type XYPosition,
   useEdgesState,
   useNodesState,
   type Connection,
@@ -16,7 +19,7 @@ import { generatePyTorch } from "./core/codegen/generatePyTorch"
 import { estimateNodeParamCount, formatParamCount } from "./core/graph/paramCount"
 import type { GraphLayoutMode, NeuralGraph, ParamValue } from "./core/graph/types"
 import { importModelSource, importOnnxBuffer } from "./core/import/importModel"
-import { getLayerDef } from "./core/registry/layerRegistry"
+import { getLayerDef, layerLibrary } from "./core/registry/layerRegistry"
 import { serializeGraph, parseGraphJson } from "./core/serialize/graphJson"
 import { inferGraph } from "./core/shape/inferShape"
 import { validateGraph } from "./core/validate/validateGraph"
@@ -34,6 +37,7 @@ import {
   type Locale,
   formatExactParamCount,
   formatLayoutMode,
+  getLayerCategoryLabel,
   getLayerDescription,
   getLayerLabel,
   getUiText,
@@ -52,6 +56,27 @@ const initialEdges = graphToCanvasEdges(defaultGraph)
 
 function copyToClipboard(value: string) {
   void navigator.clipboard.writeText(value)
+}
+
+type PendingConnectionMenu = {
+  flowPosition: XYPosition
+  menuPosition: XYPosition
+  fromNodeId: string
+  fromHandleId: string | null
+  fromHandleType: HandleType
+}
+
+function getClientPositionFromPointerEvent(event: MouseEvent | TouchEvent): XYPosition | null {
+  if ("changedTouches" in event && event.changedTouches.length > 0) {
+    const touch = event.changedTouches[0]
+    return { x: touch.clientX, y: touch.clientY }
+  }
+
+  if ("clientX" in event && "clientY" in event) {
+    return { x: event.clientX, y: event.clientY }
+  }
+
+  return null
 }
 
 function getPreferredLocale(): Locale {
@@ -84,6 +109,8 @@ export default function App() {
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(initialNodes[0]?.id ?? null)
   const [draftJson, setDraftJson] = useState("")
   const [flowInstance, setFlowInstance] = useState<ReactFlowInstance<CanvasNode, Edge> | null>(null)
+  const [pendingConnectionMenu, setPendingConnectionMenu] = useState<PendingConnectionMenu | null>(null)
+  const [pendingConnectionQuery, setPendingConnectionQuery] = useState("")
   const [leftSidebarCollapsed, setLeftSidebarCollapsed] = useState<boolean>(() =>
     getStoredPanelState("nnmind-left-sidebar-collapsed", false),
   )
@@ -92,6 +119,7 @@ export default function App() {
   )
 
   const text = getUiText(locale)
+  const flowSurfaceRef = useRef<HTMLDivElement | null>(null)
 
   useEffect(() => {
     window.localStorage.setItem("nnmind-locale", locale)
@@ -138,6 +166,35 @@ export default function App() {
   const graphJson = useMemo(() => serializeGraph(graph), [graph])
   const pythonCode = useMemo(() => generatePyTorch(graph), [graph])
   const selectedNode = decoratedNodes.find((node) => node.id === selectedNodeId)
+  const connectionMenuLayers = useMemo(() => {
+    if (!pendingConnectionMenu) {
+      return []
+    }
+
+    const keyword = pendingConnectionQuery.trim().toLowerCase()
+
+    return layerLibrary
+      .filter((layer) =>
+        pendingConnectionMenu.fromHandleType === "source"
+          ? layer.inputs.length > 0
+          : layer.outputs.length > 0,
+      )
+      .filter((layer) => {
+        if (!keyword) {
+          return true
+        }
+
+        return [
+          layer.type,
+          getLayerLabel(layer.type, layer.label, locale),
+          getLayerDescription(layer.type, layer.description, locale),
+          getLayerCategoryLabel(layer.category, locale),
+        ]
+          .join(" ")
+          .toLowerCase()
+          .includes(keyword)
+      })
+  }, [locale, pendingConnectionMenu, pendingConnectionQuery])
 
   function fitCanvasSoon() {
     requestAnimationFrame(() => {
@@ -146,6 +203,8 @@ export default function App() {
   }
 
   function loadGraph(nextGraph: NeuralGraph, nextLayoutMode = layoutMode) {
+    setPendingConnectionMenu(null)
+    setPendingConnectionQuery("")
     startTransition(() => {
       setNodes(graphToCanvasNodes(nextGraph, nextLayoutMode))
       setEdges(graphToCanvasEdges(nextGraph))
@@ -155,6 +214,8 @@ export default function App() {
   }
 
   function handleConnect(connection: Connection) {
+    setPendingConnectionMenu(null)
+    setPendingConnectionQuery("")
     setEdges((current) =>
       addEdge(
         {
@@ -167,6 +228,8 @@ export default function App() {
   }
 
   function handleAddLayer(layerType: CanvasNode["data"]["layerType"]) {
+    setPendingConnectionMenu(null)
+    setPendingConnectionQuery("")
     const selectedNode = nodes.find((node) => node.id === selectedNodeId)
     const offset = layoutMode === "vertical" ? { x: 0, y: 200 } : { x: 260, y: 0 }
     const nextPosition = selectedNode
@@ -270,6 +333,98 @@ export default function App() {
   function loadGraphFromJson(raw: string) {
     const parsed = parseGraphJson(raw)
     loadGraph(parsed)
+  }
+
+  function handleConnectEnd(
+    event: MouseEvent | TouchEvent,
+    connectionState: FinalConnectionState,
+  ) {
+    if (!flowInstance || !connectionState.fromNode || !connectionState.fromHandle) {
+      return
+    }
+
+    if (connectionState.toNode || connectionState.toHandle) {
+      return
+    }
+
+    const clientPosition = getClientPositionFromPointerEvent(event)
+    if (!clientPosition) {
+      return
+    }
+
+    const surfaceRect = flowSurfaceRef.current?.getBoundingClientRect()
+    const menuWidth = 320
+    const menuHeight = 420
+    const menuPosition = surfaceRect
+      ? {
+          x: Math.min(
+            Math.max(clientPosition.x - surfaceRect.left, 16),
+            Math.max(16, surfaceRect.width - menuWidth - 16),
+          ),
+          y: Math.min(
+            Math.max(clientPosition.y - surfaceRect.top, 16),
+            Math.max(16, surfaceRect.height - menuHeight - 16),
+          ),
+        }
+      : { x: 16, y: 16 }
+
+    setPendingConnectionQuery("")
+    setPendingConnectionMenu({
+      flowPosition: flowInstance.screenToFlowPosition(clientPosition),
+      menuPosition,
+      fromNodeId: connectionState.fromNode.id,
+      fromHandleId: connectionState.fromHandle.id ?? null,
+      fromHandleType: connectionState.fromHandle.type,
+    })
+  }
+
+  function handleAddLayerFromConnection(layerType: CanvasNode["data"]["layerType"]) {
+    if (!pendingConnectionMenu) {
+      return
+    }
+
+    const newNode = buildCanvasNode(layerType, nodes.length, layoutMode, pendingConnectionMenu.flowPosition)
+    const newLayerDef = getLayerDef(layerType)
+
+    setNodes((current) => [...current, newNode])
+    setSelectedNodeId(newNode.id)
+
+    if (pendingConnectionMenu.fromHandleType === "source") {
+      const targetPort = newLayerDef.inputs[0]?.name
+
+      if (targetPort) {
+        setEdges((current) => [
+          ...current,
+          {
+            id: `e-${pendingConnectionMenu.fromNodeId}-${newNode.id}-${targetPort}`,
+            source: pendingConnectionMenu.fromNodeId,
+            sourceHandle: pendingConnectionMenu.fromHandleId ?? undefined,
+            target: newNode.id,
+            targetHandle: targetPort,
+            animated: false,
+          },
+        ])
+      }
+    } else {
+      const sourcePort = newLayerDef.outputs[0]?.name
+
+      if (sourcePort) {
+        setEdges((current) => [
+          ...current,
+          {
+            id: `e-${newNode.id}-${pendingConnectionMenu.fromNodeId}-${pendingConnectionMenu.fromHandleId ?? "in"}`,
+            source: newNode.id,
+            sourceHandle: sourcePort,
+            target: pendingConnectionMenu.fromNodeId,
+            targetHandle: pendingConnectionMenu.fromHandleId ?? undefined,
+            animated: false,
+          },
+        ])
+      }
+    }
+
+    setPendingConnectionMenu(null)
+    setPendingConnectionQuery("")
   }
 
   async function handleImportModelFile(file: File) {
@@ -406,13 +561,14 @@ export default function App() {
                 </p>
               </div>
             </div>
-            <div className="flow-surface">
+            <div className="flow-surface" ref={flowSurfaceRef}>
               <ReactFlow
                 nodes={decoratedNodes}
                 edges={edges}
                 onNodesChange={onNodesChange}
                 onEdgesChange={onEdgesChange}
                 onConnect={handleConnect}
+                onConnectEnd={handleConnectEnd}
                 onNodeClick={(_, node) => setSelectedNodeId(node.id)}
                 onPaneClick={() => setSelectedNodeId(null)}
                 onInit={setFlowInstance}
@@ -424,6 +580,65 @@ export default function App() {
                 <Controls />
                 <MiniMap pannable zoomable />
               </ReactFlow>
+              {pendingConnectionMenu ? (
+                <div
+                  className="connection-menu"
+                  style={{
+                    left: pendingConnectionMenu.menuPosition.x,
+                    top: pendingConnectionMenu.menuPosition.y,
+                  }}
+                >
+                  <div className="connection-menu__header">
+                    <div>
+                      <strong>
+                        {pendingConnectionMenu.fromHandleType === "source"
+                          ? text.connectionMenuTitleNext
+                          : text.connectionMenuTitlePrevious}
+                      </strong>
+                      <p>
+                        {pendingConnectionMenu.fromHandleType === "source"
+                          ? text.connectionMenuHintNext
+                          : text.connectionMenuHintPrevious}
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      className="connection-menu__close"
+                      onClick={() => {
+                        setPendingConnectionMenu(null)
+                        setPendingConnectionQuery("")
+                      }}
+                    >
+                      {text.cancel}
+                    </button>
+                  </div>
+                  <label className="field connection-menu__search">
+                    <input
+                      value={pendingConnectionQuery}
+                      onChange={(event) => setPendingConnectionQuery(event.target.value)}
+                      placeholder={text.connectionMenuSearchPlaceholder}
+                      autoFocus
+                    />
+                  </label>
+                  <div className="connection-menu__list">
+                    {connectionMenuLayers.length === 0 ? (
+                      <div className="connection-menu__empty">{text.connectionMenuEmpty}</div>
+                    ) : (
+                      connectionMenuLayers.map((layer) => (
+                        <button
+                          key={layer.type}
+                          type="button"
+                          className="connection-menu__item"
+                          onClick={() => handleAddLayerFromConnection(layer.type)}
+                        >
+                          <span>{getLayerLabel(layer.type, layer.label, locale)}</span>
+                          <small>{getLayerCategoryLabel(layer.category, locale)}</small>
+                        </button>
+                      ))
+                    )}
+                  </div>
+                </div>
+              ) : null}
             </div>
           </section>
 
