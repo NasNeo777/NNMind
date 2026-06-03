@@ -127,7 +127,7 @@ const presetCopy: Record<Locale, Record<string, PresetCopy>> = {
         "simple-cnn": {
             title: "Simple CNN",
             family: "入门样例",
-            description: "默认样例，用来快速验证基础 shape 推导和导出链路。",
+            description: "包含单个输入节点的空白画布，方便快速搭建自己的网络。",
         },
         resnet18: {
             title: "ResNet-18",
@@ -164,7 +164,7 @@ const presetCopy: Record<Locale, Record<string, PresetCopy>> = {
         "simple-cnn": {
             title: "Simple CNN",
             family: "Starter",
-            description: "The default sample for validating basic shape inference and export.",
+            description: "A blank canvas with a single input node, perfect for quickly building your own network.",
         },
         resnet18: {
             title: "ResNet-18",
