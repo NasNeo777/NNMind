@@ -335,18 +335,6 @@ npm run dev
 
 <br />
 
-## 🏷️ 关键词
-
-<sub>
-`神经网络编辑器` · `可视化模型搭建` · `PyTorch 设计器` · `深度学习画布` ·
-`无代码 AI` · `拖拽式神经网络` · `CNN 架构师` · `Transformer 可视化` ·
-`模型架构工具` · `ONNX 查看器` · `ResNet 搭建` · `LSTM 设计` ·
-`深度学习教学` · `模型原型` · `图神经网络编辑器` ·
-`开源` · `React Flow` · `TypeScript` · `浏览器运行` · `科研工具`
-</sub>
-
-<br /><br />
-
 ## 📄 开源协议
 
 **[MIT](LICENSE)** © 2026 NasNeo

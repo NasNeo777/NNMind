@@ -335,18 +335,6 @@ Open **[http://localhost:5173](http://localhost:5173)** — you'll see a canvas 
 
 <br />
 
-## 🏷️ Keywords
-
-<sub>
-`neural network editor` · `visual model builder` · `PyTorch designer` · `deep learning canvas` ·
-`no-code AI` · `drag-and-drop neural network` · `CNN architect` · `Transformer visualizer` ·
-`model architecture tool` · `ONNX viewer` · `ResNet builder` · `LSTM designer` ·
-`deep learning education` · `model prototyping` · `graph-based NN editor` ·
-`open source` · `React Flow` · `TypeScript` · `browser-based` · `research tool`
-</sub>
-
-<br /><br />
-
 ## 📄 License
 
 **[MIT](LICENSE)** © 2026 NasNeo
