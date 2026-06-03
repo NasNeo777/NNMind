@@ -151,7 +151,83 @@ export default function App() {
     return () => window.removeEventListener("keydown", handleKeyDown)
   }, [])
 
-  const graph = useMemo(() => canvasToGraph(nodes, edges), [edges, nodes])
+  useEffect(() => {
+    let changed = false
+    const nextNodes = nodes.map((node) => {
+      const spec = inference.specsByNodeId[node.id]
+      const inputShape = spec?.inputs[0]?.shape
+      if (!inputShape || inputShape.length === 0) return node
+
+      const nextParams = { ...node.data.params }
+      const lt = node.data.layerType
+
+      function setIfDiff(key: string, actual: number | number[] | null) {
+        if (actual === null || actual === undefined) return
+        if (Array.isArray(actual)) {
+          const cur = node.data.params[key]
+          if (!Array.isArray(cur) || cur.length !== actual.length || cur.some((v, i) => v !== actual[i])) {
+            ;(nextParams as Record<string, unknown>)[key] = [...actual]
+            changed = true
+          }
+          return
+        }
+        if (node.data.params[key] !== actual) {
+          ;(nextParams as Record<string, unknown>)[key] = actual
+          changed = true
+        }
+      }
+
+      // Extract channel dim (index 1) for 4D inputs, last dim for others
+      const ch = typeof inputShape[1] === "number" ? inputShape[1] : null
+      const last = typeof inputShape[inputShape.length - 1] === "number" ? inputShape[inputShape.length - 1] : null
+      const third = inputShape.length >= 3 && typeof inputShape[2] === "number" ? inputShape[2] : null
+
+      switch (lt) {
+        case "Conv2d":
+        case "ResidualBlock2d":
+        case "ResNetBasicBlock":
+        case "ResNetBottleneck":
+        case "PatchEmbedding":
+          setIfDiff("in_channels", ch)
+          break
+        case "BatchNorm2d":
+          setIfDiff("num_features", ch)
+          break
+        case "Linear":
+          setIfDiff("in_features", last)
+          break
+        case "LSTM":
+        case "GRU":
+          setIfDiff("input_size", last)
+          break
+        case "SelfAttention":
+          setIfDiff("embed_dim", third)
+          break
+        case "TransformerEncoder":
+        case "TransformerDecoder":
+          setIfDiff("d_model", third)
+          break
+        case "LayerNorm": {
+          // normalized_shape = trailing dims matching param length
+          const ns = node.data.params.normalized_shape
+          const nsLen = Array.isArray(ns) ? ns.length : 1
+          const trailing = inputShape.slice(inputShape.length - nsLen)
+          if (trailing.every((d) => typeof d === "number")) {
+            setIfDiff("normalized_shape", trailing as number[])
+          }
+          break
+        }
+      }
+
+      if (!changed) return node
+      return { ...node, data: { ...node.data, params: nextParams } }
+    })
+
+    if (changed) {
+      setNodes(nextNodes)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [inference])
   const inference = useMemo(() => inferGraph(graph), [graph])
   const issues = useMemo(() => validateGraph(graph), [graph])
   const nodeParamCounts = useMemo(
