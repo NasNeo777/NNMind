@@ -259,7 +259,7 @@ export const modelPresets: GraphPreset[] = [
     id: "simple-cnn",
     title: "Simple CNN",
     family: "Starter",
-    description: "当前默认样例，方便验证基础 shape 推导和导出。",
+    description: "包含单个输入节点的空白画布，方便快速搭建自己的网络。",
     graph: simpleCnnGraph,
   },
   {

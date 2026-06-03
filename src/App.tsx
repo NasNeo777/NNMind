@@ -117,6 +117,7 @@ export default function App() {
   const [rightSidebarCollapsed, setRightSidebarCollapsed] = useState<boolean>(() =>
     getStoredPanelState("nnmind-right-sidebar-collapsed", false),
   )
+  const [isCanvasFullscreen, setCanvasFullscreen] = useState(false)
 
   const text = getUiText(locale)
   const flowSurfaceRef = useRef<HTMLDivElement | null>(null)
@@ -455,7 +456,7 @@ export default function App() {
   }
 
   return (
-    <main className="app-shell">
+    <main className={`app-shell${isCanvasFullscreen ? " is-canvas-fullscreen" : ""}`}>
       <header className="topbar">
         <div className="topbar__intro">
           <span className="topbar__eyebrow">{text.appEyebrow}</span>
@@ -560,6 +561,16 @@ export default function App() {
                   {text.layout} {formatLayoutMode(locale, layoutMode)} · {text.nodes} {nodes.length} · {text.edges} {edges.length} · {text.issues} {issues.length} · {text.params} {formatParamCount(totalParamCount)}
                 </p>
               </div>
+              <button
+                type="button"
+                className="canvas-fullscreen-toggle"
+                onClick={() => {
+                  setCanvasFullscreen((current) => !current)
+                  fitCanvasSoon()
+                }}
+              >
+                {isCanvasFullscreen ? text.exitFullscreen : text.fullscreen}
+              </button>
             </div>
             <div className="flow-surface" ref={flowSurfaceRef}>
               <ReactFlow

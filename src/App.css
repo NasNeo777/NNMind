@@ -696,6 +696,51 @@ button:hover {
   }
 }
 
+/* ---- Canvas Fullscreen ---- */
+
+.canvas-fullscreen-toggle {
+  padding: 0.65rem 0.95rem;
+  border-radius: 14px;
+  background: rgba(19, 38, 58, 0.08);
+  color: #102033;
+  font-size: 0.9rem;
+  font-weight: 600;
+  box-shadow: none;
+  white-space: nowrap;
+}
+
+.app-shell.is-canvas-fullscreen {
+  padding: 0;
+  gap: 0;
+}
+
+.app-shell.is-canvas-fullscreen .topbar,
+.app-shell.is-canvas-fullscreen .sidebar,
+.app-shell.is-canvas-fullscreen .export-panel {
+  display: none;
+}
+
+.app-shell.is-canvas-fullscreen .workspace-shell {
+  grid-template-columns: 1fr;
+  gap: 0;
+}
+
+.app-shell.is-canvas-fullscreen .canvas-panel {
+  border-radius: 0;
+  border: 0;
+  box-shadow: none;
+  min-height: 100vh;
+  display: grid;
+  grid-template-rows: auto 1fr;
+}
+
+.app-shell.is-canvas-fullscreen .flow-surface {
+  height: 100%;
+  border-radius: 0;
+}
+
+/* ---- Mobile ---- */
+
 @media (max-width: 720px) {
   .app-shell {
     padding: 0.8rem;
