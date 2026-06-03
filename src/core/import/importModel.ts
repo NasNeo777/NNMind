@@ -92,15 +92,17 @@ function parseNamedAndPositionalArgs(args: string) {
 }
 
 function parseModuleDefinition(moduleName: string, className: string, args: string): ParsedModule | null {
-  const params = createDefaultParams(className as LayerType)
   const parsed = parseNamedAndPositionalArgs(args)
 
   switch (className) {
-    case "Embedding":
+    case "Embedding": {
+      const params = createDefaultParams("Embedding")
       params.num_embeddings = parsed.positional[0] ?? params.num_embeddings
       params.embedding_dim = parsed.positional[1] ?? params.embedding_dim
       return { layerType: "Embedding", name: moduleName, params }
-    case "Conv2d":
+    }
+    case "Conv2d": {
+      const params = createDefaultParams("Conv2d")
       params.in_channels = parsed.positional[0] ?? params.in_channels
       params.out_channels = parsed.positional[1] ?? params.out_channels
       params.kernel_size = parsed.positional[2] ?? params.kernel_size
@@ -109,38 +111,56 @@ function parseModuleDefinition(moduleName: string, className: string, args: stri
       params.dilation = parsed.named.get("dilation") ?? params.dilation
       params.bias = parsed.named.get("bias") ?? params.bias
       return { layerType: "Conv2d", name: moduleName, params }
-    case "BatchNorm2d":
+    }
+    case "BatchNorm2d": {
+      const params = createDefaultParams("BatchNorm2d")
       params.num_features = parsed.positional[0] ?? params.num_features
       return { layerType: "BatchNorm2d", name: moduleName, params }
-    case "LayerNorm":
+    }
+    case "LayerNorm": {
+      const params = createDefaultParams("LayerNorm")
       params.normalized_shape = parsed.positional[0] ?? params.normalized_shape
       return { layerType: "LayerNorm", name: moduleName, params }
-    case "ReLU":
+    }
+    case "ReLU": {
+      const params = createDefaultParams("ReLU")
       params.inplace = parsed.named.get("inplace") ?? params.inplace
       return { layerType: "ReLU", name: moduleName, params }
+    }
     case "GELU":
-      return { layerType: "GELU", name: moduleName, params }
-    case "MaxPool2d":
+      return { layerType: "GELU", name: moduleName, params: createDefaultParams("GELU") }
+    case "MaxPool2d": {
+      const params = createDefaultParams("MaxPool2d")
       params.kernel_size = parsed.positional[0] ?? params.kernel_size
       params.stride = parsed.positional[1] ?? parsed.named.get("stride") ?? params.stride
       params.padding = parsed.positional[2] ?? parsed.named.get("padding") ?? params.padding
       return { layerType: "MaxPool2d", name: moduleName, params }
-    case "AdaptiveAvgPool2d":
+    }
+    case "AdaptiveAvgPool2d": {
+      const params = createDefaultParams("AdaptiveAvgPool2d")
       params.output_size = parsed.positional[0] ?? params.output_size
       return { layerType: "AdaptiveAvgPool2d", name: moduleName, params }
-    case "Flatten":
+    }
+    case "Flatten": {
+      const params = createDefaultParams("Flatten")
       params.start_dim = parsed.named.get("start_dim") ?? parsed.positional[0] ?? params.start_dim
       params.end_dim = parsed.named.get("end_dim") ?? parsed.positional[1] ?? params.end_dim
       return { layerType: "Flatten", name: moduleName, params }
-    case "Linear":
+    }
+    case "Linear": {
+      const params = createDefaultParams("Linear")
       params.in_features = parsed.positional[0] ?? params.in_features
       params.out_features = parsed.positional[1] ?? params.out_features
       params.bias = parsed.named.get("bias") ?? params.bias
       return { layerType: "Linear", name: moduleName, params }
-    case "Dropout":
+    }
+    case "Dropout": {
+      const params = createDefaultParams("Dropout")
       params.p = parsed.named.get("p") ?? parsed.positional[0] ?? params.p
       return { layerType: "Dropout", name: moduleName, params }
-    case "LSTM":
+    }
+    case "LSTM": {
+      const params = createDefaultParams("LSTM")
       params.input_size = parsed.named.get("input_size") ?? parsed.positional[0] ?? params.input_size
       params.hidden_size = parsed.named.get("hidden_size") ?? parsed.positional[1] ?? params.hidden_size
       params.num_layers = parsed.named.get("num_layers") ?? params.num_layers
@@ -148,7 +168,9 @@ function parseModuleDefinition(moduleName: string, className: string, args: stri
       params.bidirectional = parsed.named.get("bidirectional") ?? params.bidirectional
       params.batch_first = parsed.named.get("batch_first") ?? params.batch_first
       return { layerType: "LSTM", name: moduleName, params }
-    case "GRU":
+    }
+    case "GRU": {
+      const params = createDefaultParams("GRU")
       params.input_size = parsed.named.get("input_size") ?? parsed.positional[0] ?? params.input_size
       params.hidden_size = parsed.named.get("hidden_size") ?? parsed.positional[1] ?? params.hidden_size
       params.num_layers = parsed.named.get("num_layers") ?? params.num_layers
@@ -156,7 +178,9 @@ function parseModuleDefinition(moduleName: string, className: string, args: stri
       params.bidirectional = parsed.named.get("bidirectional") ?? params.bidirectional
       params.batch_first = parsed.named.get("batch_first") ?? params.batch_first
       return { layerType: "GRU", name: moduleName, params }
+    }
     case "TransformerEncoder": {
+      const params = createDefaultParams("TransformerEncoder")
       const layerMatch = args.match(/d_model\s*=\s*(\d+).*?nhead\s*=\s*(\d+).*?dim_feedforward\s*=\s*(\d+).*?dropout\s*=\s*([0-9.]+).*?activation\s*=\s*["'](\w+)["']/s)
       const layerCount = args.match(/num_layers\s*=\s*(\d+)/)
       if (layerMatch) {
@@ -172,6 +196,7 @@ function parseModuleDefinition(moduleName: string, className: string, args: stri
       return { layerType: "TransformerEncoder", name: moduleName, params }
     }
     case "TransformerDecoder": {
+      const params = createDefaultParams("TransformerDecoder")
       const layerMatch = args.match(/d_model\s*=\s*(\d+).*?nhead\s*=\s*(\d+).*?dim_feedforward\s*=\s*(\d+).*?dropout\s*=\s*([0-9.]+).*?activation\s*=\s*["'](\w+)["']/s)
       const layerCount = args.match(/num_layers\s*=\s*(\d+)/)
       if (layerMatch) {
@@ -187,18 +212,22 @@ function parseModuleDefinition(moduleName: string, className: string, args: stri
       return { layerType: "TransformerDecoder", name: moduleName, params }
     }
     case "PatchEmbedding2D":
-    case "PatchEmbedding":
+    case "PatchEmbedding": {
+      const params = createDefaultParams("PatchEmbedding")
       params.in_channels = parsed.positional[0] ?? params.in_channels
       params.embed_dim = parsed.positional[1] ?? params.embed_dim
       params.patch_size = parsed.positional[2] ?? params.patch_size
       return { layerType: "PatchEmbedding", name: moduleName, params }
+    }
     case "ResidualBlock2D":
-    case "ResidualBlock2d":
+    case "ResidualBlock2d": {
+      const params = createDefaultParams("ResidualBlock2d")
       params.in_channels = parsed.positional[0] ?? params.in_channels
       params.out_channels = parsed.positional[1] ?? params.out_channels
       params.stride = parsed.named.get("stride") ?? parsed.positional[2] ?? params.stride
       params.use_projection = parsed.named.get("use_projection") ?? params.use_projection
       return { layerType: "ResidualBlock2d", name: moduleName, params }
+    }
     default:
       return null
   }

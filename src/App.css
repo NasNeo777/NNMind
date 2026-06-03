@@ -46,10 +46,10 @@ button {
 }
 
 .topbar {
-  display: flex;
-  justify-content: space-between;
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) auto auto;
   gap: 1.5rem;
-  align-items: flex-end;
+  align-items: end;
   padding: 1.5rem;
   border: 1px solid rgba(148, 163, 184, 0.35);
   border-radius: 28px;
@@ -91,6 +91,33 @@ button {
   display: flex;
   gap: 0.75rem;
   flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.topbar__stats {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.stat-card {
+  min-width: 110px;
+  padding: 0.8rem 0.95rem;
+  border-radius: 18px;
+  background: rgba(19, 38, 58, 0.05);
+  border: 1px solid rgba(148, 163, 184, 0.25);
+}
+
+.stat-card span {
+  display: block;
+  margin-bottom: 0.2rem;
+  color: #526277;
+  font-size: 0.76rem;
+  font-family: "IBM Plex Mono", monospace;
+}
+
+.stat-card strong {
+  font-size: 1rem;
 }
 
 .topbar__actions button,
@@ -134,6 +161,24 @@ button {
 .palette-grid {
   display: grid;
   gap: 0.75rem;
+}
+
+.palette-groups {
+  display: grid;
+  gap: 1rem;
+}
+
+.palette-group {
+  display: grid;
+  gap: 0.65rem;
+}
+
+.palette-group__title {
+  color: #526277;
+  font-size: 0.76rem;
+  font-family: "IBM Plex Mono", monospace;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
 }
 
 .preset-grid {
@@ -183,6 +228,12 @@ button {
   color: #526277;
   font-size: 0.82rem;
   text-transform: capitalize;
+}
+
+.palette-card__hint {
+  color: #526277;
+  font-size: 0.8rem;
+  text-align: left;
 }
 
 .canvas-panel {
@@ -259,6 +310,13 @@ button {
   gap: 0.75rem;
 }
 
+.panel__meta {
+  margin: 0.4rem 0 0;
+  color: #0f766e;
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 0.82rem;
+}
+
 .issue-card {
   padding: 0.9rem 1rem;
   border-radius: 18px;
@@ -295,6 +353,27 @@ button {
   display: flex;
   gap: 0.75rem;
   flex-wrap: wrap;
+}
+
+.file-action {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.85rem 1.05rem;
+  border-radius: 16px;
+  background: #13263a;
+  color: white;
+  cursor: pointer;
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+
+.file-action input {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  cursor: pointer;
 }
 
 .code-block {
@@ -359,6 +438,13 @@ button {
   font-size: 0.88rem;
 }
 
+.layer-node__param-count {
+  margin-bottom: 0.55rem;
+  color: #0f766e;
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 0.72rem;
+}
+
 .layer-node__ports {
   display: grid;
   gap: 0.3rem;
@@ -377,6 +463,10 @@ button {
 @media (max-width: 1440px) {
   body {
     min-width: 0;
+  }
+
+  .topbar {
+    grid-template-columns: 1fr;
   }
 
   .workspace-grid {

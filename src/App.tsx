@@ -13,7 +13,10 @@ import {
   type ReactFlowInstance,
 } from "@xyflow/react"
 import { generatePyTorch } from "./core/codegen/generatePyTorch"
+import { estimateNodeParamCount, formatParamCount } from "./core/graph/paramCount"
 import type { GraphLayoutMode, NeuralGraph, ParamValue } from "./core/graph/types"
+import { importModelSource } from "./core/import/importModel"
+import { getLayerDef } from "./core/registry/layerRegistry"
 import { serializeGraph, parseGraphJson } from "./core/serialize/graphJson"
 import { inferGraph } from "./core/shape/inferShape"
 import { validateGraph } from "./core/validate/validateGraph"
@@ -53,6 +56,15 @@ export default function App() {
   const graph = useMemo(() => canvasToGraph(nodes, edges), [edges, nodes])
   const inference = useMemo(() => inferGraph(graph), [graph])
   const issues = useMemo(() => validateGraph(graph), [graph])
+  const nodeParamCounts = useMemo(
+    () =>
+      Object.fromEntries(graph.nodes.map((node) => [node.id, estimateNodeParamCount(node)])),
+    [graph.nodes],
+  )
+  const totalParamCount = useMemo(
+    () => graph.nodes.reduce((total, node) => total + estimateNodeParamCount(node), 0),
+    [graph.nodes],
+  )
   const decoratedNodes = useMemo(
     () =>
       nodes.map((node) => ({
@@ -60,11 +72,12 @@ export default function App() {
         data: {
           ...node.data,
           layoutMode,
+          paramCount: nodeParamCounts[node.id] ?? 0,
           specs: inference.specsByNodeId[node.id] ?? { inputs: [], outputs: [] },
           issueLevel: issues.find((issue) => issue.nodeId === node.id)?.level,
         },
       })),
-    [inference.specsByNodeId, issues, layoutMode, nodes],
+    [inference.specsByNodeId, issues, layoutMode, nodeParamCounts, nodes],
   )
 
   const graphJson = useMemo(() => serializeGraph(graph), [graph])
@@ -99,7 +112,71 @@ export default function App() {
   }
 
   function handleAddLayer(layerType: CanvasNode["data"]["layerType"]) {
-    setNodes((current) => [...current, buildCanvasNode(layerType, current.length, layoutMode)])
+    const selectedNode = nodes.find((node) => node.id === selectedNodeId)
+    const offset = layoutMode === "vertical" ? { x: 0, y: 200 } : { x: 260, y: 0 }
+    const nextPosition = selectedNode
+      ? { x: selectedNode.position.x + offset.x, y: selectedNode.position.y + offset.y }
+      : undefined
+    const newNode = buildCanvasNode(layerType, nodes.length, layoutMode, nextPosition)
+
+    setNodes((current) => [...current, newNode])
+    setSelectedNodeId(newNode.id)
+
+    if (!selectedNode) {
+      fitCanvasSoon()
+      return
+    }
+
+    const sourceDef = getLayerDef(selectedNode.data.layerType)
+    const targetDef = getLayerDef(layerType)
+
+    if (sourceDef.outputs.length === 0 || targetDef.inputs.length === 0) {
+      fitCanvasSoon()
+      return
+    }
+
+    const outgoing = edges.filter((edge) => edge.source === selectedNode.id)
+    const sourcePort = sourceDef.outputs[0].name
+    const targetPort = targetDef.inputs[0].name
+
+    if (outgoing.length === 1 && targetDef.outputs.length > 0) {
+      const downstream = outgoing[0]
+      const relayPort = targetDef.outputs[0].name
+
+      setEdges((current) => [
+        ...current.filter((edge) => edge.id !== downstream.id),
+        {
+          id: `e-${selectedNode.id}-${newNode.id}-${targetPort}`,
+          source: selectedNode.id,
+          sourceHandle: sourcePort,
+          target: newNode.id,
+          targetHandle: targetPort,
+          animated: false,
+        },
+        {
+          id: `e-${newNode.id}-${downstream.target}-${downstream.targetHandle ?? "in"}`,
+          source: newNode.id,
+          sourceHandle: relayPort,
+          target: downstream.target,
+          targetHandle: downstream.targetHandle ?? "in",
+          animated: false,
+        },
+      ])
+    } else {
+      setEdges((current) => [
+        ...current,
+        {
+          id: `e-${selectedNode.id}-${newNode.id}-${targetPort}`,
+          source: selectedNode.id,
+          sourceHandle: sourcePort,
+          target: newNode.id,
+          targetHandle: targetPort,
+          animated: false,
+        },
+      ])
+    }
+
+    fitCanvasSoon()
   }
 
   function handleUpdateName(name: string) {
@@ -140,6 +217,24 @@ export default function App() {
     loadGraph(parsed)
   }
 
+  async function handleImportModelFile(file: File) {
+    const lowerName = file.name.toLowerCase()
+
+    if (lowerName.endsWith(".pt") || lowerName.endsWith(".pth") || lowerName.endsWith(".ckpt")) {
+      window.alert("Binary checkpoint files are not supported yet. Please import Graph JSON or a PyTorch .py model definition file.")
+      return
+    }
+
+    try {
+      const text = await file.text()
+      const importedGraph = importModelSource(text, layoutMode)
+      loadGraph(importedGraph)
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Import failed."
+      window.alert(message)
+    }
+  }
+
   function handleToggleLayout() {
     const nextLayoutMode: GraphLayoutMode = layoutMode === "horizontal" ? "vertical" : "horizontal"
     setLayoutMode(nextLayoutMode)
@@ -153,7 +248,21 @@ export default function App() {
         <div>
           <span className="topbar__eyebrow">NNMind Extended</span>
           <h1>Visual Neural Graph Editor</h1>
-          <p>现在已经支持 Transformer 编解码、LSTM/GRU、经典模型预设，以及横向/竖向两种阅读模式。</p>
+          <p>支持 Transformer 编解码、LSTM/GRU、经典模型预设、模型文件导入、参数量统计，以及横向/竖向两种阅读模式。</p>
+        </div>
+        <div className="topbar__stats">
+          <div className="stat-card">
+            <span>Total Params</span>
+            <strong>{formatParamCount(totalParamCount)}</strong>
+          </div>
+          <div className="stat-card">
+            <span>Nodes</span>
+            <strong>{nodes.length}</strong>
+          </div>
+          <div className="stat-card">
+            <span>Issues</span>
+            <strong>{issues.length}</strong>
+          </div>
         </div>
         <div className="topbar__actions">
           <button type="button" onClick={() => loadGraph(defaultGraph)}>
@@ -174,7 +283,7 @@ export default function App() {
       <section className="workspace-grid">
         <div className="left-stack">
           <PresetLibrary presets={modelPresets} onLoadPreset={(preset) => loadGraph(preset.graph)} />
-          <LayerPalette onAddLayer={handleAddLayer} />
+          <LayerPalette onAddLayer={handleAddLayer} selectedNodeName={selectedNode?.data.name} />
         </div>
 
         <section className="canvas-panel">
@@ -182,7 +291,7 @@ export default function App() {
             <div>
               <h2>Graph Canvas</h2>
               <p>
-                Layout {layoutMode} · Nodes {nodes.length} · Edges {edges.length} · Issues {issues.length}
+                Layout {layoutMode} · Nodes {nodes.length} · Edges {edges.length} · Issues {issues.length} · Params {formatParamCount(totalParamCount)}
               </p>
             </div>
           </div>
@@ -226,6 +335,7 @@ export default function App() {
             window.alert(message)
           }
         }}
+        onImportModelFile={handleImportModelFile}
         onCopyPyTorch={() => copyToClipboard(pythonCode)}
         onCopyJson={() => copyToClipboard(graphJson)}
       />
