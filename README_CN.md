@@ -47,6 +47,12 @@
 
 <br />
 
+<div align="center">
+  <img src="img/首页.png" alt="NNMind 截图" width="100%" />
+</div>
+
+<br />
+
 ---
 
 <br />
