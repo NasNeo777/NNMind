@@ -151,6 +151,9 @@ export default function App() {
     return () => window.removeEventListener("keydown", handleKeyDown)
   }, [])
 
+  const graph = useMemo(() => canvasToGraph(nodes, edges), [edges, nodes])
+  const inference = useMemo(() => inferGraph(graph), [graph])
+
   useEffect(() => {
     let changed = false
     const nextNodes = nodes.map((node) => {
@@ -161,7 +164,7 @@ export default function App() {
       const nextParams = { ...node.data.params }
       const lt = node.data.layerType
 
-      function setIfDiff(key: string, actual: number | number[] | null) {
+      function setIfDiff(key: string, actual: unknown) {
         if (actual === null || actual === undefined) return
         if (Array.isArray(actual)) {
           const cur = node.data.params[key]
@@ -177,7 +180,6 @@ export default function App() {
         }
       }
 
-      // Extract channel dim (index 1) for 4D inputs, last dim for others
       const ch = typeof inputShape[1] === "number" ? inputShape[1] : null
       const last = typeof inputShape[inputShape.length - 1] === "number" ? inputShape[inputShape.length - 1] : null
       const third = inputShape.length >= 3 && typeof inputShape[2] === "number" ? inputShape[2] : null
@@ -208,7 +210,6 @@ export default function App() {
           setIfDiff("d_model", third)
           break
         case "LayerNorm": {
-          // normalized_shape = trailing dims matching param length
           const ns = node.data.params.normalized_shape
           const nsLen = Array.isArray(ns) ? ns.length : 1
           const trailing = inputShape.slice(inputShape.length - nsLen)
@@ -228,7 +229,7 @@ export default function App() {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [inference])
-  const inference = useMemo(() => inferGraph(graph), [graph])
+
   const issues = useMemo(() => validateGraph(graph), [graph])
   const nodeParamCounts = useMemo(
     () =>
