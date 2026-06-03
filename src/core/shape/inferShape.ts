@@ -92,17 +92,12 @@ function inferConv2d(node: LayerNode, input: TensorSpec): TensorSpec {
     throw new Error("Conv2d 需要 4D Tensor: [B, C, H, W]")
   }
 
-  const [batch, channels, height, width] = input.shape
+  const [batch, , height, width] = input.shape
   const [kernelH, kernelW] = asTuple(node.params.kernel_size, [3, 3])
   const [strideH, strideW] = asTuple(node.params.stride, [1, 1])
   const [paddingH, paddingW] = asTuple(node.params.padding, [1, 1])
   const [dilationH, dilationW] = asTuple(node.params.dilation, [1, 1])
-  const inChannels = asNumber(node.params.in_channels, 3)
   const outChannels = asNumber(node.params.out_channels, 32)
-
-  if (channels !== inChannels) {
-    throw new Error(`Conv2d 输入通道不匹配: 需要 ${inChannels}, 实际 ${String(channels)}`)
-  }
 
   const outputHeight =
     typeof height === "number"
@@ -129,18 +124,8 @@ function inferResidualBlock2d(node: LayerNode, input: TensorSpec): TensorSpec {
   }
 
   const [batch, channels, height, width] = input.shape
-  const inChannels = asNumber(node.params.in_channels, 64)
   const outChannels = asNumber(node.params.out_channels, 64)
   const stride = asNumber(node.params.stride, 1)
-  const useProjection = asBoolean(node.params.use_projection, false)
-
-  if (channels !== inChannels) {
-    throw new Error(`ResidualBlock2d 输入通道不匹配: 需要 ${inChannels}, 实际 ${String(channels)}`)
-  }
-
-  if (!useProjection && inChannels !== outChannels && stride === 1) {
-    throw new Error("ResidualBlock2d 若不使用 projection，输入输出通道必须一致。")
-  }
 
   return {
     dtype: input.dtype,
@@ -162,22 +147,9 @@ function inferResNetBottleneck(node: LayerNode, input: TensorSpec): TensorSpec {
     throw new Error("ResNetBottleneck 需要 4D Tensor。")
   }
 
-  const [batch, channels, height, width] = input.shape
-  const inChannels = asNumber(node.params.in_channels, 256)
-  const bottleneckChannels = asNumber(node.params.bottleneck_channels, 64)
+  const [batch, , height, width] = input.shape
   const outChannels = asNumber(node.params.out_channels, 256)
   const stride = asNumber(node.params.stride, 1)
-  const useProjection = asBoolean(node.params.use_projection, false)
-
-  void bottleneckChannels
-
-  if (channels !== inChannels) {
-    throw new Error(`ResNetBottleneck 输入通道不匹配: 需要 ${inChannels}, 实际 ${String(channels)}`)
-  }
-
-  if (!useProjection && inChannels !== outChannels && stride === 1) {
-    throw new Error("ResNetBottleneck 若不使用 projection，输入输出通道必须一致。")
-  }
 
   return {
     dtype: input.dtype,
@@ -190,15 +162,9 @@ function inferResNetBottleneck(node: LayerNode, input: TensorSpec): TensorSpec {
   }
 }
 
-function inferBatchNorm2d(node: LayerNode, input: TensorSpec): TensorSpec {
+function inferBatchNorm2d(_node: LayerNode, input: TensorSpec): TensorSpec {
   if (input.shape.length !== 4) {
     throw new Error("BatchNorm2d 需要 4D Tensor。")
-  }
-
-  const features = asNumber(node.params.num_features, 32)
-
-  if (input.shape[1] !== features) {
-    throw new Error(`BatchNorm2d 特征数不匹配: 需要 ${features}, 实际 ${String(input.shape[1])}`)
   }
 
   return input
@@ -339,13 +305,7 @@ function inferLinear(node: LayerNode, input: TensorSpec): TensorSpec {
     throw new Error("Linear 至少需要 2D Tensor。")
   }
 
-  const inFeatures = asNumber(node.params.in_features, 128)
   const outFeatures = asNumber(node.params.out_features, 10)
-  const lastDim = input.shape[input.shape.length - 1]
-
-  if (lastDim !== inFeatures) {
-    throw new Error(`Linear 输入特征不匹配: 需要 ${inFeatures}, 实际 ${String(lastDim)}`)
-  }
 
   return {
     dtype: input.dtype,
