@@ -88,8 +88,6 @@ Import **ONNX models** to visualize existing architectures, debug **shape mismat
 
 ## 🚀 <a id="-quick-start"></a>Quick Start
 
-<div align="center">
-
 ```bash
 git clone https://github.com/NasNeo/NNMind.git
 cd NNMind
@@ -98,8 +96,6 @@ npm run dev
 ```
 
 Open **[http://localhost:5173](http://localhost:5173)** — you'll see a canvas with a single Input node. Start building.
-
-</div>
 
 <br />
 

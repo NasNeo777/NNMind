@@ -88,8 +88,6 @@
 
 ## 🚀 <a id="-快速启动"></a>快速启动
 
-<div align="center">
-
 ```bash
 git clone https://github.com/NasNeo/NNMind.git
 cd NNMind
@@ -98,8 +96,6 @@ npm run dev
 ```
 
 浏览器访问 **[http://localhost:5173](http://localhost:5173)** ——你会看到一个只有 Input 节点的画布，开始搭建吧。
-
-</div>
 
 <br />
 
