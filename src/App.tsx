@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, startTransition } from "react"
+import { useMemo, useState, startTransition } from "react"
 import {
   addEdge,
   Background,
@@ -12,8 +12,9 @@ import {
   type NodeTypes,
 } from "@xyflow/react"
 import { generatePyTorch } from "./core/codegen/generatePyTorch"
-import type { GraphIssue, ParamValue } from "./core/graph/types"
+import type { ParamValue } from "./core/graph/types"
 import { serializeGraph, parseGraphJson } from "./core/serialize/graphJson"
+import { inferGraph } from "./core/shape/inferShape"
 import { validateGraph } from "./core/validate/validateGraph"
 import { simpleCnnGraph } from "./examples/simpleCnn"
 import { ExportPanel } from "./editor/ExportPanel"
@@ -25,9 +26,9 @@ import { LayerPalette } from "./editor/LayerPalette"
 import type { CanvasNode } from "./editor/types"
 import "./App.css"
 
-const nodeTypes: NodeTypes = {
+const nodeTypes = {
   layerNode: LayerNode,
-}
+} satisfies NodeTypes
 
 const initialNodes = graphToCanvasNodes(simpleCnnGraph)
 const initialEdges = graphToCanvasEdges(simpleCnnGraph)
@@ -43,81 +44,24 @@ export default function App() {
   const [draftJson, setDraftJson] = useState("")
 
   const graph = useMemo(() => canvasToGraph(nodes, edges), [edges, nodes])
+  const inference = useMemo(() => inferGraph(graph), [graph])
   const issues = useMemo(() => validateGraph(graph), [graph])
-  const inference = useMemo(() => {
-    const shapeMap = new Map<string, CanvasNode["data"]["specs"]>()
-
-    for (const issue of issues) {
-      if (issue.nodeId && !shapeMap.has(issue.nodeId)) {
-        shapeMap.set(issue.nodeId, { inputs: [], outputs: [] })
-      }
-    }
-
-    const inferred = graph.nodes.reduce<Record<string, CanvasNode["data"]["specs"]>>((accumulator, node) => {
-      const incoming = issues
-      void incoming
-      return accumulator
-    }, {})
-
-    void inferred
-    return graph
-  }, [graph, issues])
-
-  useEffect(() => {
-    const graphNow = canvasToGraph(nodes, edges)
-    const validation = validateGraph(graphNow)
-    const nextNodes = graphToCanvasNodes(graphNow)
-
-    setNodes((previous) =>
-      previous.map((node) => {
-        const match = nextNodes.find((item) => item.id === node.id)
-        const issueLevel = validation.find((issue) => issue.nodeId === node.id)?.level
-
-        return match
-          ? {
-              ...node,
-              data: {
-                ...node.data,
-                ...match.data,
-                specs: undefined,
-                issueLevel,
-              },
-            }
-          : node
-      }),
-    )
-  }, [edges, nodes, setNodes])
-
-  const graphJson = useMemo(() => serializeGraph(graph), [graph])
-  const pythonCode = useMemo(() => generatePyTorch(graph), [graph])
-  const selectedNode = nodes.find((node) => node.id === selectedNodeId)
-
-  function refreshNodeDecorations() {
-    const graphNow = canvasToGraph(nodes, edges)
-    const shapeInference = (() => {
-      const module = require("./core/shape/inferShape")
-      return module.inferGraph(graphNow) as {
-        specsByNodeId: Record<string, { inputs: any[]; outputs: any[] }>
-      }
-    })()
-    const validation = validateGraph(graphNow)
-
-    setNodes((previous) =>
-      previous.map((node) => ({
+  const decoratedNodes = useMemo(
+    () =>
+      nodes.map((node) => ({
         ...node,
         data: {
           ...node.data,
-          specs: shapeInference.specsByNodeId[node.id] ?? { inputs: [], outputs: [] },
-          issueLevel: validation.find((issue) => issue.nodeId === node.id)?.level,
+          specs: inference.specsByNodeId[node.id] ?? { inputs: [], outputs: [] },
+          issueLevel: issues.find((issue) => issue.nodeId === node.id)?.level,
         },
       })),
-    )
-  }
+    [inference.specsByNodeId, issues, nodes],
+  )
 
-  useEffect(() => {
-    refreshNodeDecorations()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+  const graphJson = useMemo(() => serializeGraph(graph), [graph])
+  const pythonCode = useMemo(() => generatePyTorch(graph), [graph])
+  const selectedNode = decoratedNodes.find((node) => node.id === selectedNodeId)
 
   function handleConnect(connection: Connection) {
     setEdges((current) =>
@@ -178,11 +122,6 @@ export default function App() {
     })
   }
 
-  useEffect(() => {
-    refreshNodeDecorations()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [nodes.length, edges.length, graphJson])
-
   return (
     <main className="app-shell">
       <header className="topbar">
@@ -218,7 +157,7 @@ export default function App() {
           </div>
           <div className="flow-surface">
             <ReactFlow
-              nodes={nodes}
+              nodes={decoratedNodes}
               edges={edges}
               onNodesChange={onNodesChange}
               onEdgesChange={onEdgesChange}

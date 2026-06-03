@@ -15,4 +15,4 @@ export type CanvasNodeData = {
   issueLevel?: GraphIssue["level"]
 }
 
-export type CanvasNode = Node<CanvasNodeData>
+export type CanvasNode = Node<CanvasNodeData, "layerNode">

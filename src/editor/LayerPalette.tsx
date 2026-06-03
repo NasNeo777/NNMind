@@ -1,3 +1,4 @@
+import type { CSSProperties } from "react"
 import { layerLibrary } from "../core/registry/layerRegistry"
 import type { LayerType } from "../core/graph/types"
 
@@ -19,7 +20,7 @@ export function LayerPalette({ onAddLayer }: LayerPaletteProps) {
             type="button"
             className="palette-card"
             onClick={() => onAddLayer(layer.type)}
-            style={{ "--accent": layer.accent } as React.CSSProperties}
+            style={{ "--accent": layer.accent } as CSSProperties}
           >
             <span className="palette-card__label">{layer.label}</span>
             <span className="palette-card__meta">{layer.category}</span>

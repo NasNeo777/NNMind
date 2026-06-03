@@ -1,73 +1,66 @@
-# React + TypeScript + Vite
+# NNMind
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+一个面向 PyTorch 的可视化神经网络结构编辑器 MVP。
 
-Currently, two official plugins are available:
+当前这版已经具备第一阶段到第四阶段的主骨架：
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+- React Flow 画布，支持节点拖拽和连线
+- Layer Registry，节点类型和参数表单自动生成
+- Tensor shape 推导
+- 图校验和错误提示
+- Graph JSON 保存/导入
+- 单主链路 PyTorch 代码导出
 
-## React Compiler
+## 快速启动
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
-
-## Expanding the ESLint configuration
-
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
-
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
-
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```bash
+npm install
+npm run dev
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+默认本地地址：
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
-
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```bash
+http://127.0.0.1:5173/
 ```
+
+## 当前示例
+
+页面默认加载一条 `Simple CNN`：
+
+```txt
+Input -> Conv2d -> ReLU -> MaxPool2d -> Flatten -> Linear -> Output
+```
+
+它会自动推导：
+
+```txt
+[B, 3, 224, 224]
+-> [B, 32, 224, 224]
+-> [B, 32, 112, 112]
+-> [B, 401408]
+-> [B, 10]
+```
+
+## 目录结构
+
+```txt
+src/
+  core/
+    codegen/
+    graph/
+    registry/
+    serialize/
+    shape/
+    validate/
+  editor/
+  examples/
+```
+
+## 下一步建议
+
+1. 给连线增加更严格的输入/输出合法性检查
+2. 增加删除节点、删除边、重命名图模板
+3. 把 `Add / Concat` 的分支 codegen 做完整
+4. 增加本地持久化和文件下载导入
+5. 再考虑 3D 展示层

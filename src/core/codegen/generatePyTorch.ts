@@ -1,6 +1,10 @@
 import { getOutgoingEdges } from "../graph/utils"
 import type { LayerNode, NeuralGraph, ParamValue } from "../graph/types"
 
+function pyBool(value: ParamValue): string {
+  return value ? "True" : "False"
+}
+
 function tupleToPython(value: ParamValue): string {
   if (!Array.isArray(value)) {
     return String(value)
@@ -13,11 +17,11 @@ function tupleToPython(value: ParamValue): string {
 function moduleLine(node: LayerNode): string | null {
   switch (node.layerType) {
     case "Conv2d":
-      return `self.${node.name} = nn.Conv2d(${node.params.in_channels}, ${node.params.out_channels}, ${tupleToPython(node.params.kernel_size)}, ${tupleToPython(node.params.stride)}, ${tupleToPython(node.params.padding)}, dilation=${tupleToPython(node.params.dilation)}, bias=${String(node.params.bias)})`
+      return `self.${node.name} = nn.Conv2d(${node.params.in_channels}, ${node.params.out_channels}, ${tupleToPython(node.params.kernel_size)}, ${tupleToPython(node.params.stride)}, ${tupleToPython(node.params.padding)}, dilation=${tupleToPython(node.params.dilation)}, bias=${pyBool(node.params.bias)})`
     case "BatchNorm2d":
       return `self.${node.name} = nn.BatchNorm2d(${node.params.num_features})`
     case "ReLU":
-      return `self.${node.name} = nn.ReLU(inplace=${String(node.params.inplace)})`
+      return `self.${node.name} = nn.ReLU(inplace=${pyBool(node.params.inplace)})`
     case "MaxPool2d":
       return `self.${node.name} = nn.MaxPool2d(${tupleToPython(node.params.kernel_size)}, ${tupleToPython(node.params.stride)}, ${tupleToPython(node.params.padding)})`
     case "AdaptiveAvgPool2d":
@@ -25,7 +29,7 @@ function moduleLine(node: LayerNode): string | null {
     case "Flatten":
       return `self.${node.name} = nn.Flatten(start_dim=${node.params.start_dim}, end_dim=${node.params.end_dim})`
     case "Linear":
-      return `self.${node.name} = nn.Linear(${node.params.in_features}, ${node.params.out_features}, bias=${String(node.params.bias)})`
+      return `self.${node.name} = nn.Linear(${node.params.in_features}, ${node.params.out_features}, bias=${pyBool(node.params.bias)})`
     case "Dropout":
       return `self.${node.name} = nn.Dropout(p=${node.params.p})`
     default:
