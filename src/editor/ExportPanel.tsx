@@ -1,4 +1,7 @@
+import { type Locale, getUiText } from "../i18n"
+
 type ExportPanelProps = {
+  locale: Locale
   graphJson: string
   pythonCode: string
   draftJson: string
@@ -10,6 +13,7 @@ type ExportPanelProps = {
 }
 
 export function ExportPanel({
+  locale,
   graphJson,
   pythonCode,
   draftJson,
@@ -19,22 +23,24 @@ export function ExportPanel({
   onCopyPyTorch,
   onCopyJson,
 }: ExportPanelProps) {
+  const text = getUiText(locale)
+
   return (
     <section className="panel export-panel">
       <div className="panel__header">
-        <h2>Export & Import</h2>
-        <p>支持导出 Graph JSON / PyTorch，也支持导入 Graph JSON、PyTorch `.py/.txt`，以及 ONNX `.onnx/.pb` 模型文件。</p>
+        <h2>{text.exportTitle}</h2>
+        <p>{text.exportDescription}</p>
       </div>
 
       <div className="export-actions">
         <button type="button" onClick={onCopyJson}>
-          Copy JSON
+          {text.copyJson}
         </button>
         <button type="button" onClick={onCopyPyTorch}>
-          Copy PyTorch
+          {text.copyPyTorch}
         </button>
         <button type="button" onClick={onImportJson}>
-          Load Draft JSON
+          {text.loadDraftJson}
         </button>
         <label className="file-action">
           <input
@@ -48,7 +54,7 @@ export function ExportPanel({
               }
             }}
           />
-          <span>Import Model File</span>
+          <span>{text.importModelFile}</span>
         </label>
       </div>
 
@@ -58,11 +64,11 @@ export function ExportPanel({
           <textarea readOnly value={pythonCode} />
         </label>
         <label className="code-block">
-          <span>Graph JSON</span>
+          <span>{text.graphJson}</span>
           <textarea readOnly value={graphJson} />
         </label>
         <label className="code-block">
-          <span>Import Draft</span>
+          <span>{text.importDraft}</span>
           <textarea value={draftJson} onChange={(event) => onDraftJsonChange(event.target.value)} />
         </label>
       </div>

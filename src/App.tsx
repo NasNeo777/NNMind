@@ -1,4 +1,4 @@
-import { useMemo, useState, startTransition } from "react"
+import { useEffect, useMemo, useState, startTransition } from "react"
 import {
   addEdge,
   Background,
@@ -30,6 +30,15 @@ import { LayerNode } from "./editor/LayerNode"
 import { LayerPalette } from "./editor/LayerPalette"
 import { PresetLibrary } from "./editor/PresetLibrary"
 import type { CanvasNode } from "./editor/types"
+import {
+  type Locale,
+  formatExactParamCount,
+  formatLayoutMode,
+  getLayerDescription,
+  getLayerLabel,
+  getUiText,
+  translateMessage,
+} from "./i18n"
 import "./App.css"
 
 const nodeTypes = {
@@ -45,13 +54,56 @@ function copyToClipboard(value: string) {
   void navigator.clipboard.writeText(value)
 }
 
+function getPreferredLocale(): Locale {
+  if (typeof window === "undefined") {
+    return "zh"
+  }
+
+  const stored = window.localStorage.getItem("nnmind-locale")
+  if (stored === "zh" || stored === "en") {
+    return stored
+  }
+
+  return navigator.language.toLowerCase().startsWith("zh") ? "zh" : "en"
+}
+
+function getStoredPanelState(key: string, fallback: boolean): boolean {
+  if (typeof window === "undefined") {
+    return fallback
+  }
+
+  const stored = window.localStorage.getItem(key)
+  return stored === null ? fallback : stored === "true"
+}
+
 export default function App() {
+  const [locale, setLocale] = useState<Locale>(getPreferredLocale)
   const [layoutMode, setLayoutMode] = useState<GraphLayoutMode>(defaultLayoutMode)
   const [nodes, setNodes, onNodesChange] = useNodesState<CanvasNode>(initialNodes)
   const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>(initialEdges)
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(initialNodes[0]?.id ?? null)
   const [draftJson, setDraftJson] = useState("")
   const [flowInstance, setFlowInstance] = useState<ReactFlowInstance<CanvasNode, Edge> | null>(null)
+  const [leftSidebarCollapsed, setLeftSidebarCollapsed] = useState<boolean>(() =>
+    getStoredPanelState("nnmind-left-sidebar-collapsed", false),
+  )
+  const [rightSidebarCollapsed, setRightSidebarCollapsed] = useState<boolean>(() =>
+    getStoredPanelState("nnmind-right-sidebar-collapsed", false),
+  )
+
+  const text = getUiText(locale)
+
+  useEffect(() => {
+    window.localStorage.setItem("nnmind-locale", locale)
+  }, [locale])
+
+  useEffect(() => {
+    window.localStorage.setItem("nnmind-left-sidebar-collapsed", String(leftSidebarCollapsed))
+  }, [leftSidebarCollapsed])
+
+  useEffect(() => {
+    window.localStorage.setItem("nnmind-right-sidebar-collapsed", String(rightSidebarCollapsed))
+  }, [rightSidebarCollapsed])
 
   const graph = useMemo(() => canvasToGraph(nodes, edges), [edges, nodes])
   const inference = useMemo(() => inferGraph(graph), [graph])
@@ -71,13 +123,16 @@ export default function App() {
         ...node,
         data: {
           ...node.data,
+          label: getLayerLabel(node.data.layerType, node.data.label, locale),
+          description: getLayerDescription(node.data.layerType, node.data.description, locale),
           layoutMode,
+          locale,
           paramCount: nodeParamCounts[node.id] ?? 0,
           specs: inference.specsByNodeId[node.id] ?? { inputs: [], outputs: [] },
           issueLevel: issues.find((issue) => issue.nodeId === node.id)?.level,
         },
       })),
-    [inference.specsByNodeId, issues, layoutMode, nodeParamCounts, nodes],
+    [inference.specsByNodeId, issues, layoutMode, locale, nodeParamCounts, nodes],
   )
 
   const graphJson = useMemo(() => serializeGraph(graph), [graph])
@@ -221,7 +276,7 @@ export default function App() {
     const lowerName = file.name.toLowerCase()
 
     if (lowerName.endsWith(".pt") || lowerName.endsWith(".pth") || lowerName.endsWith(".ckpt")) {
-      window.alert("Checkpoint weights are not supported yet. Please import Graph JSON, PyTorch .py, ONNX, or a text model definition file.")
+      window.alert(text.unsupportedCheckpoint)
       return
     }
 
@@ -232,7 +287,7 @@ export default function App() {
           : importModelSource(await file.text(), layoutMode)
       loadGraph(importedGraph)
     } catch (error) {
-      const message = error instanceof Error ? error.message : "Import failed."
+      const message = error instanceof Error ? translateMessage(locale, error.message) : text.importFailed
       window.alert(message)
     }
   }
@@ -247,52 +302,96 @@ export default function App() {
   return (
     <main className="app-shell">
       <header className="topbar">
-        <div>
-          <span className="topbar__eyebrow">NNMind Extended</span>
-          <h1>Visual Neural Graph Editor</h1>
-          <p>支持 Transformer 编解码、LSTM/GRU、经典模型预设、模型文件导入、参数量统计，以及横向/竖向两种阅读模式。</p>
+        <div className="topbar__intro">
+          <span className="topbar__eyebrow">{text.appEyebrow}</span>
+          <h1>{text.appTitle}</h1>
+          <p>{text.appDescription}</p>
         </div>
         <div className="topbar__stats">
           <div className="stat-card">
-            <span>Total Params</span>
+            <span>{text.totalParams}</span>
             <strong>{formatParamCount(totalParamCount)}</strong>
+            <small>{formatExactParamCount(locale, totalParamCount)}</small>
           </div>
           <div className="stat-card">
-            <span>Nodes</span>
+            <span>{text.nodes}</span>
             <strong>{nodes.length}</strong>
           </div>
           <div className="stat-card">
-            <span>Issues</span>
+            <span>{text.issues}</span>
             <strong>{issues.length}</strong>
           </div>
         </div>
-        <div className="topbar__actions">
-          <button type="button" onClick={() => loadGraph(defaultGraph)}>
-            Reset Sample
-          </button>
-          <button type="button" onClick={handleToggleLayout}>
-            {layoutMode === "horizontal" ? "Switch To Vertical" : "Switch To Horizontal"}
-          </button>
-          <button type="button" onClick={() => copyToClipboard(graphJson)}>
-            Copy Graph JSON
-          </button>
-          <button type="button" onClick={() => copyToClipboard(pythonCode)}>
-            Copy PyTorch
-          </button>
+        <div className="topbar__controls">
+          <div className="locale-switch" role="group" aria-label={text.language}>
+            <span className="locale-switch__label">{text.language}</span>
+            <button
+              type="button"
+              className={locale === "zh" ? "is-active" : ""}
+              onClick={() => setLocale("zh")}
+            >
+              {text.chinese}
+            </button>
+            <button
+              type="button"
+              className={locale === "en" ? "is-active" : ""}
+              onClick={() => setLocale("en")}
+            >
+              {text.english}
+            </button>
+          </div>
+          <div className="topbar__actions">
+            <button type="button" onClick={() => loadGraph(defaultGraph)}>
+              {text.resetSample}
+            </button>
+            <button type="button" onClick={handleToggleLayout}>
+              {layoutMode === "horizontal" ? text.switchToVertical : text.switchToHorizontal}
+            </button>
+            <button type="button" onClick={() => copyToClipboard(graphJson)}>
+              {text.copyGraphJson}
+            </button>
+            <button type="button" onClick={() => copyToClipboard(pythonCode)}>
+              {text.copyPyTorch}
+            </button>
+          </div>
         </div>
       </header>
 
-      <LayerPalette onAddLayer={handleAddLayer} selectedNodeName={selectedNode?.data.name} />
+      <section className="workspace-shell">
+        <aside className={`sidebar sidebar--left ${leftSidebarCollapsed ? "is-collapsed" : ""}`}>
+          <div className="sidebar__header">
+            <div>
+              <span className="sidebar__eyebrow">{text.leftSidebar}</span>
+              {!leftSidebarCollapsed ? <strong>{text.quickAddTitle}</strong> : null}
+            </div>
+            <button
+              type="button"
+              className="sidebar-toggle"
+              onClick={() => {
+                setLeftSidebarCollapsed((current) => !current)
+                fitCanvasSoon()
+              }}
+            >
+              {leftSidebarCollapsed ? text.expand : text.collapse}
+            </button>
+          </div>
+          {leftSidebarCollapsed ? (
+            <div className="sidebar__collapsed-copy">{text.leftSidebar}</div>
+          ) : (
+            <div className="sidebar__content">
+              <LayerPalette locale={locale} onAddLayer={handleAddLayer} selectedNodeName={selectedNode?.data.name} />
+              <PresetLibrary locale={locale} presets={modelPresets} onLoadPreset={(preset) => loadGraph(preset.graph)} />
+            </div>
+          )}
+        </aside>
 
-      <section className="workspace-grid">
-        <div className="main-stack">
-          <PresetLibrary presets={modelPresets} onLoadPreset={(preset) => loadGraph(preset.graph)} />
+        <div className="center-stack">
           <section className="canvas-panel">
             <div className="canvas-panel__header">
               <div>
-                <h2>Graph Canvas</h2>
+                <h2>{text.canvasTitle}</h2>
                 <p>
-                  Layout {layoutMode} · Nodes {nodes.length} · Edges {edges.length} · Issues {issues.length} · Params {formatParamCount(totalParamCount)}
+                  {text.layout} {formatLayoutMode(locale, layoutMode)} · {text.nodes} {nodes.length} · {text.edges} {edges.length} · {text.issues} {issues.length} · {text.params} {formatParamCount(totalParamCount)}
                 </p>
               </div>
             </div>
@@ -316,31 +415,54 @@ export default function App() {
               </ReactFlow>
             </div>
           </section>
+
+          <ExportPanel
+            locale={locale}
+            graphJson={graphJson}
+            pythonCode={pythonCode}
+            draftJson={draftJson}
+            onDraftJsonChange={setDraftJson}
+            onImportJson={() => {
+              try {
+                loadGraphFromJson(draftJson)
+              } catch (error) {
+                const message = error instanceof Error ? translateMessage(locale, error.message) : text.importFailed
+                window.alert(message)
+              }
+            }}
+            onImportModelFile={handleImportModelFile}
+            onCopyPyTorch={() => copyToClipboard(pythonCode)}
+            onCopyJson={() => copyToClipboard(graphJson)}
+          />
         </div>
 
-        <div className="side-stack">
-          <Inspector node={selectedNode} onUpdateName={handleUpdateName} onUpdateParam={handleUpdateParam} />
-          <IssuesPanel issues={issues} />
-        </div>
+        <aside className={`sidebar sidebar--right ${rightSidebarCollapsed ? "is-collapsed" : ""}`}>
+          <div className="sidebar__header">
+            <div>
+              <span className="sidebar__eyebrow">{text.rightSidebar}</span>
+              {!rightSidebarCollapsed ? <strong>{text.inspectorTitle}</strong> : null}
+            </div>
+            <button
+              type="button"
+              className="sidebar-toggle"
+              onClick={() => {
+                setRightSidebarCollapsed((current) => !current)
+                fitCanvasSoon()
+              }}
+            >
+              {rightSidebarCollapsed ? text.expand : text.collapse}
+            </button>
+          </div>
+          {rightSidebarCollapsed ? (
+            <div className="sidebar__collapsed-copy">{text.rightSidebar}</div>
+          ) : (
+            <div className="sidebar__content side-stack">
+              <Inspector locale={locale} node={selectedNode} onUpdateName={handleUpdateName} onUpdateParam={handleUpdateParam} />
+              <IssuesPanel locale={locale} issues={issues} />
+            </div>
+          )}
+        </aside>
       </section>
-
-      <ExportPanel
-        graphJson={graphJson}
-        pythonCode={pythonCode}
-        draftJson={draftJson}
-        onDraftJsonChange={setDraftJson}
-        onImportJson={() => {
-          try {
-            loadGraphFromJson(draftJson)
-          } catch (error) {
-            const message = error instanceof Error ? error.message : "导入失败。"
-            window.alert(message)
-          }
-        }}
-        onImportModelFile={handleImportModelFile}
-        onCopyPyTorch={() => copyToClipboard(pythonCode)}
-        onCopyJson={() => copyToClipboard(graphJson)}
-      />
     </main>
   )
 }

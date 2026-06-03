@@ -1,25 +1,41 @@
 import type { GraphPreset } from "../examples/modelPresets"
+import { type Locale, getPresetCopy, getUiText } from "../i18n"
 
 type PresetLibraryProps = {
+  locale: Locale
   presets: GraphPreset[]
   onLoadPreset: (preset: GraphPreset) => void
 }
 
-export function PresetLibrary({ presets, onLoadPreset }: PresetLibraryProps) {
+export function PresetLibrary({ locale, presets, onLoadPreset }: PresetLibraryProps) {
+  const text = getUiText(locale)
+
   return (
     <section className="panel preset-panel">
       <div className="panel__header">
-        <h2>Model Presets</h2>
-        <p>一键载入经典 CNN、序列模型和 Transformer 编解码骨架。</p>
+        <h2>{text.presetTitle}</h2>
+        <p>{text.presetDescription}</p>
       </div>
       <div className="preset-grid">
-        {presets.map((preset) => (
-          <button key={preset.id} type="button" className="preset-card" onClick={() => onLoadPreset(preset)}>
-            <span className="preset-card__family">{preset.family}</span>
-            <strong>{preset.title}</strong>
-            <span className="preset-card__description">{preset.description}</span>
-          </button>
-        ))}
+        {presets.map((preset) => {
+          const copy = getPresetCopy(
+            preset.id,
+            {
+              title: preset.title,
+              family: preset.family,
+              description: preset.description,
+            },
+            locale,
+          )
+
+          return (
+            <button key={preset.id} type="button" className="preset-card" onClick={() => onLoadPreset(preset)}>
+              <span className="preset-card__family">{copy.family}</span>
+              <strong>{copy.title}</strong>
+              <span className="preset-card__description">{copy.description}</span>
+            </button>
+          )
+        })}
       </div>
     </section>
   )
