@@ -1,9 +1,60 @@
 import { getIncomingEdges, topologicalSort } from "../graph/utils"
-import type { LayerNode, NeuralGraph, ParamValue, TensorShape } from "../graph/types"
+import type { InferenceResult, LayerNode, NeuralGraph, ParamValue, TensorShape } from "../graph/types"
 import { getLayerDef } from "../registry/layerRegistry"
+import { inferGraph } from "../shape/inferShape"
 
 function pyBool(value: ParamValue): string {
   return value ? "True" : "False"
+}
+
+function actualChannel(
+  inference: InferenceResult | null,
+  nodeId: string,
+  paramFallback: ParamValue,
+): number {
+  const spec = inference?.specsByNodeId[nodeId]?.inputs[0]
+  if (!spec) return Number(paramFallback)
+  const dim = spec.shape[1]
+  return typeof dim === "number" ? dim : Number(paramFallback)
+}
+
+function actualLastDim(
+  inference: InferenceResult | null,
+  nodeId: string,
+  paramFallback: ParamValue,
+): number {
+  const spec = inference?.specsByNodeId[nodeId]?.inputs[0]
+  if (!spec) return Number(paramFallback)
+  const dim = spec.shape[spec.shape.length - 1]
+  return typeof dim === "number" ? dim : Number(paramFallback)
+}
+
+function actualInputFeatures(
+  inference: InferenceResult | null,
+  nodeId: string,
+  paramFallback: ParamValue,
+): number {
+  const spec = inference?.specsByNodeId[nodeId]?.inputs[0]
+  if (!spec || spec.shape.length < 2) return Number(paramFallback)
+  const dim = spec.shape[spec.shape.length - 1]
+  return typeof dim === "number" ? dim : Number(paramFallback)
+}
+
+function actualNormalizedShape(
+  inference: InferenceResult | null,
+  nodeId: string,
+  paramFallback: ParamValue,
+): string {
+  const spec = inference?.specsByNodeId[nodeId]?.inputs[0]
+  if (!spec) {
+    return Array.isArray(paramFallback) ? `(${paramFallback.join(", ")})` : String(paramFallback)
+  }
+  const normalizedLen = Array.isArray(paramFallback) ? paramFallback.length : 1
+  const trailing = spec.shape.slice(spec.shape.length - normalizedLen)
+  if (trailing.every((d) => typeof d === "number")) {
+    return `(${trailing.join(", ")}${trailing.length === 1 ? "," : ""})`
+  }
+  return Array.isArray(paramFallback) ? `(${paramFallback.join(", ")})` : String(paramFallback)
 }
 
 function tupleToPython(value: ParamValue): string {
@@ -183,25 +234,30 @@ function helperCode(helpers: Set<string>): string[] {
   return blocks
 }
 
-function moduleLine(node: LayerNode, moduleName: string, helpers: Set<string>): string | null {
+function moduleLine(
+  node: LayerNode,
+  moduleName: string,
+  helpers: Set<string>,
+  inference: InferenceResult | null,
+): string | null {
   switch (node.layerType) {
     case "Embedding":
       return `self.${moduleName} = nn.Embedding(${node.params.num_embeddings}, ${node.params.embedding_dim})`
     case "Conv2d":
-      return `self.${moduleName} = nn.Conv2d(${node.params.in_channels}, ${node.params.out_channels}, ${tupleToPython(node.params.kernel_size)}, ${tupleToPython(node.params.stride)}, ${tupleToPython(node.params.padding)}, dilation=${tupleToPython(node.params.dilation)}, bias=${pyBool(node.params.bias)})`
+      return `self.${moduleName} = nn.Conv2d(${actualChannel(inference, node.id, node.params.in_channels)}, ${node.params.out_channels}, ${tupleToPython(node.params.kernel_size)}, ${tupleToPython(node.params.stride)}, ${tupleToPython(node.params.padding)}, dilation=${tupleToPython(node.params.dilation)}, bias=${pyBool(node.params.bias)})`
     case "ResidualBlock2d":
       helpers.add("ResidualBlock2D")
-      return `self.${moduleName} = ResidualBlock2D(${node.params.in_channels}, ${node.params.out_channels}, stride=${node.params.stride}, use_projection=${pyBool(node.params.use_projection)})`
+      return `self.${moduleName} = ResidualBlock2D(${actualChannel(inference, node.id, node.params.in_channels)}, ${node.params.out_channels}, stride=${node.params.stride}, use_projection=${pyBool(node.params.use_projection)})`
     case "ResNetBasicBlock":
       helpers.add("ResNetBasicBlock")
-      return `self.${moduleName} = ResNetBasicBlock(${node.params.in_channels}, ${node.params.out_channels}, stride=${node.params.stride}, use_projection=${pyBool(node.params.use_projection)})`
+      return `self.${moduleName} = ResNetBasicBlock(${actualChannel(inference, node.id, node.params.in_channels)}, ${node.params.out_channels}, stride=${node.params.stride}, use_projection=${pyBool(node.params.use_projection)})`
     case "ResNetBottleneck":
       helpers.add("ResNetBottleneck")
-      return `self.${moduleName} = ResNetBottleneck(${node.params.in_channels}, ${node.params.bottleneck_channels}, ${node.params.out_channels}, stride=${node.params.stride}, use_projection=${pyBool(node.params.use_projection)})`
+      return `self.${moduleName} = ResNetBottleneck(${actualChannel(inference, node.id, node.params.in_channels)}, ${node.params.bottleneck_channels}, ${node.params.out_channels}, stride=${node.params.stride}, use_projection=${pyBool(node.params.use_projection)})`
     case "BatchNorm2d":
-      return `self.${moduleName} = nn.BatchNorm2d(${node.params.num_features})`
+      return `self.${moduleName} = nn.BatchNorm2d(${actualChannel(inference, node.id, node.params.num_features)})`
     case "LayerNorm":
-      return `self.${moduleName} = nn.LayerNorm(${tupleToPython(node.params.normalized_shape)})`
+      return `self.${moduleName} = nn.LayerNorm(${actualNormalizedShape(inference, node.id, node.params.normalized_shape)})`
     case "ReLU":
       return `self.${moduleName} = nn.ReLU(inplace=${pyBool(node.params.inplace)})`
     case "GELU":
@@ -212,23 +268,23 @@ function moduleLine(node: LayerNode, moduleName: string, helpers: Set<string>): 
       return `self.${moduleName} = nn.AdaptiveAvgPool2d(${tupleToPython(node.params.output_size)})`
     case "PatchEmbedding":
       helpers.add("PatchEmbedding2D")
-      return `self.${moduleName} = PatchEmbedding2D(${node.params.in_channels}, ${node.params.embed_dim}, ${tupleToPython(node.params.patch_size)})`
+      return `self.${moduleName} = PatchEmbedding2D(${actualChannel(inference, node.id, node.params.in_channels)}, ${node.params.embed_dim}, ${tupleToPython(node.params.patch_size)})`
     case "Flatten":
       return `self.${moduleName} = nn.Flatten(start_dim=${node.params.start_dim}, end_dim=${node.params.end_dim})`
     case "Linear":
-      return `self.${moduleName} = nn.Linear(${node.params.in_features}, ${node.params.out_features}, bias=${pyBool(node.params.bias)})`
+      return `self.${moduleName} = nn.Linear(${actualInputFeatures(inference, node.id, node.params.in_features)}, ${node.params.out_features}, bias=${pyBool(node.params.bias)})`
     case "Dropout":
       return `self.${moduleName} = nn.Dropout(p=${node.params.p})`
     case "LSTM":
-      return `self.${moduleName} = nn.LSTM(input_size=${node.params.input_size}, hidden_size=${node.params.hidden_size}, num_layers=${node.params.num_layers}, dropout=${node.params.dropout}, batch_first=${pyBool(node.params.batch_first)}, bidirectional=${pyBool(node.params.bidirectional)})`
+      return `self.${moduleName} = nn.LSTM(input_size=${actualInputFeatures(inference, node.id, node.params.input_size)}, hidden_size=${node.params.hidden_size}, num_layers=${node.params.num_layers}, dropout=${node.params.dropout}, batch_first=${pyBool(node.params.batch_first)}, bidirectional=${pyBool(node.params.bidirectional)})`
     case "GRU":
-      return `self.${moduleName} = nn.GRU(input_size=${node.params.input_size}, hidden_size=${node.params.hidden_size}, num_layers=${node.params.num_layers}, dropout=${node.params.dropout}, batch_first=${pyBool(node.params.batch_first)}, bidirectional=${pyBool(node.params.bidirectional)})`
+      return `self.${moduleName} = nn.GRU(input_size=${actualInputFeatures(inference, node.id, node.params.input_size)}, hidden_size=${node.params.hidden_size}, num_layers=${node.params.num_layers}, dropout=${node.params.dropout}, batch_first=${pyBool(node.params.batch_first)}, bidirectional=${pyBool(node.params.bidirectional)})`
     case "SelfAttention":
-      return `self.${moduleName} = nn.MultiheadAttention(embed_dim=${node.params.embed_dim}, num_heads=${node.params.num_heads}, batch_first=${pyBool(node.params.batch_first)})`
+      return `self.${moduleName} = nn.MultiheadAttention(embed_dim=${actualLastDim(inference, node.id, node.params.embed_dim)}, num_heads=${node.params.num_heads}, batch_first=${pyBool(node.params.batch_first)})`
     case "TransformerEncoder":
-      return `self.${moduleName} = nn.TransformerEncoder(nn.TransformerEncoderLayer(d_model=${node.params.d_model}, nhead=${node.params.nhead}, dim_feedforward=${node.params.dim_feedforward}, dropout=${node.params.dropout}, activation="${node.params.activation}", batch_first=True), num_layers=${node.params.num_layers})`
+      return `self.${moduleName} = nn.TransformerEncoder(nn.TransformerEncoderLayer(d_model=${actualLastDim(inference, node.id, node.params.d_model)}, nhead=${node.params.nhead}, dim_feedforward=${node.params.dim_feedforward}, dropout=${node.params.dropout}, activation="${node.params.activation}", batch_first=True), num_layers=${node.params.num_layers})`
     case "TransformerDecoder":
-      return `self.${moduleName} = nn.TransformerDecoder(nn.TransformerDecoderLayer(d_model=${node.params.d_model}, nhead=${node.params.nhead}, dim_feedforward=${node.params.dim_feedforward}, dropout=${node.params.dropout}, activation="${node.params.activation}", batch_first=True), num_layers=${node.params.num_layers})`
+      return `self.${moduleName} = nn.TransformerDecoder(nn.TransformerDecoderLayer(d_model=${actualLastDim(inference, node.id, node.params.d_model)}, nhead=${node.params.nhead}, dim_feedforward=${node.params.dim_feedforward}, dropout=${node.params.dropout}, activation="${node.params.activation}", batch_first=True), num_layers=${node.params.num_layers})`
     default:
       return null
   }
@@ -257,7 +313,9 @@ function operationLine(node: LayerNode, moduleName: string, outputVar: string, i
       return node.params.mode === "cls" ? `${outputVar} = ${inputVars[0]}[:, 0]` : `${outputVar} = ${inputVars[0]}.mean(dim=1)`
     case "LSTM":
     case "GRU":
-      return node.params.return_sequences ? `${outputVar}, _ = self.${moduleName}(${inputVars[0]})` : `${outputVar}, _ = self.${moduleName}(${inputVars[0]})\n        ${outputVar} = ${outputVar}[:, -1] if ${pyBool(node.params.batch_first)} else ${outputVar}[-1]`
+      return node.params.return_sequences
+        ? `${outputVar}, _ = self.${moduleName}(${inputVars[0]})`
+        : `${outputVar}, _ = self.${moduleName}(${inputVars[0]})\n${outputVar} = ${outputVar}[:, -1] if ${pyBool(node.params.batch_first)} else ${outputVar}[-1]`
     case "SelfAttention":
       return `${outputVar}, _ = self.${moduleName}(${inputVars[0]}, ${inputVars[0]}, ${inputVars[0]}, need_weights=False)`
     case "TransformerDecoder":
@@ -288,6 +346,13 @@ export function generatePyTorch(graph: NeuralGraph): string {
     ].join("\n")
   }
 
+  let inference: InferenceResult | null = null
+  try {
+    inference = inferGraph(graph)
+  } catch {
+    // If inference fails, fall back to node params
+  }
+
   const usedNames = new Set<string>()
   const moduleNames = new Map<string, string>()
   const variableNames = new Map<string, string>()
@@ -299,7 +364,7 @@ export function generatePyTorch(graph: NeuralGraph): string {
     if (needsModule(node)) {
       const moduleName = buildUniqueName(node.name, node.layerType.toLowerCase(), usedNames)
       moduleNames.set(node.id, moduleName)
-      const line = moduleLine(node, moduleName, helpers)
+      const line = moduleLine(node, moduleName, helpers, inference)
 
       if (line) {
         moduleLines.push(line)
@@ -347,7 +412,12 @@ export function generatePyTorch(graph: NeuralGraph): string {
   const helperBlocks = helperCode(helpers)
   const exampleLines = inputNodes.map((node) => {
     const argName = inputArgNames.get(node.id) ?? "input_tensor"
-    const shape = Array.isArray(node.params.shape) ? (node.params.shape as TensorShape) : [2, 3, 224, 224]
+    const inferredShape = inference?.specsByNodeId[node.id]?.outputs[0]?.shape
+    const shape: TensorShape = inferredShape && inferredShape.every((d) => d !== null)
+      ? (inferredShape as TensorShape)
+      : Array.isArray(node.params.shape)
+        ? (node.params.shape as TensorShape)
+        : [2, 3, 224, 224]
     return `    ${argName} = ${exampleTensor(shape, node.params.dtype)}`
   })
   const callArgs = inputNodes.map((node) => inputArgNames.get(node.id)).filter((value): value is string => Boolean(value))
