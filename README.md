@@ -4,28 +4,42 @@
 <img src="https://img.shields.io/badge/react-19-61dafb?style=for-the-badge&logo=react&logoColor=white" alt="react" />
 <img src="https://img.shields.io/badge/typescript-6.0-3178c6?style=for-the-badge&logo=typescript&logoColor=white" alt="typescript" />
 <img src="https://img.shields.io/badge/license-MIT-10b981?style=for-the-badge&logo=bookstack&logoColor=white" alt="license" />
+<a href="https://github.com/NasNeo/NNMind"><img src="https://img.shields.io/github/stars/NasNeo/NNMind?style=for-the-badge&logo=github&color=fbbf24" alt="stars" /></a>
 
 <br /><br />
 
 <h1>🧠 NNMind</h1>
 
-<h3><em>Visual Neural Graph Editor for PyTorch</em></h3>
+<h2><em>Open Source Visual Neural Network Designer &amp; PyTorch Model Builder</em></h2>
 
 <p>
-  Drag. Connect. Inspect. Export.<br />
-  Build neural network architectures on an infinite canvas —
-  from a single <code>Input</code> node to a full ResNet or Transformer.
+  <strong>Drag. Connect. Inspect. Export.</strong><br />
+  A <strong>no-code deep learning architecture editor</strong> for researchers, engineers, and students.<br />
+  Design CNN, RNN, LSTM, GRU, and Transformer models on an <strong>interactive graph canvas</strong> —<br />
+  from a single <code>Input</code> node to production-grade architectures like ResNet, VGG, or ViT.
 </p>
 
 <br />
 
+<table>
+<tr>
+<td align="center">🎨<br /><strong>Visual Graph Editor</strong><br />Drag &amp; drop neural network design</td>
+<td align="center">🔬<br /><strong>Live Shape Inference</strong><br />Real-time tensor dimension tracking</td>
+<td align="center">📊<br /><strong>Parameter Counting</strong><br />Per-node &amp; total FLOPs-ready stats</td>
+<td align="center">🔥<br /><strong>PyTorch Codegen</strong><br />Export to nn.Module instantly</td>
+</tr>
+</table>
+
+<br />
+
 <p>
-  <a href="#quick-start">Quick Start</a> ·
-  <a href="#features">Features</a> ·
-  <a href="#ui-layout">Layout</a> ·
-  <a href="#presets">Presets</a> ·
-  <a href="#structure">Structure</a> ·
-  <a href="#roadmap">Roadmap</a> ·
+  <a href="#-why-nnmind">Why NNMind</a> ·
+  <a href="#-quick-start">Quick Start</a> ·
+  <a href="#-features">Features</a> ·
+  <a href="#-ui-layout">Layout</a> ·
+  <a href="#-presets">Presets</a> ·
+  <a href="#-project-structure">Structure</a> ·
+  <a href="#-roadmap">Roadmap</a> ·
   <a href="README_CN.md">中文文档</a>
 </p>
 
@@ -37,69 +51,34 @@
 
 <br />
 
-## ✨ Features
+## 💡 <a id="-why-nnmind"></a>Why NNMind?
+
+> **Stop writing boilerplate. Start seeing your model.**
+
+Whether you're **prototyping a novel architecture**, **teaching deep learning concepts**, or **reverse-engineering an ONNX model** — NNMind gives you an **intuitive visual interface** that replaces hundreds of lines of tedious `nn.Module` wiring with a **drag-and-drop canvas**.
 
 <table>
 <tr>
-<td width="50%">
+<td width="33%">
 
-### 🎨 Canvas
-- **Drag-and-drop** React Flow canvas with custom layer nodes
-- **Fullscreen mode** — expand the canvas edge-to-edge for focused editing
-- **Collapsible sidebars** — reclaim screen space when you need it
-- **Horizontal ↔ Vertical** layout toggle in one click
-- **Inline connection menu** — drag a handle into empty space, search, and insert a new layer instantly
+### 🎓 For Educators & Students
+Visualize **forward propagation**, inspect **tensor shapes** at every layer, and understand **parameter distribution** — all interactively. Perfect for **deep learning courses**, **workshops**, and **self-study**.
 
 </td>
-<td width="50%">
+<td width="33%">
 
-### 🔬 Inspection
-- **Per-node parameter count** — abbreviated on canvas, exact in inspector
-- **Live total parameter count** — updated in real time as you edit
-- **Tensor shape propagation** — forward inference across the graph, shown per node
-- **Graph validator** — catches missing I/O, cycles, isolated nodes, port mismatches, and shape errors
+### 🔬 For Researchers
+Rapidly **sketch novel architectures**, validate **shape compatibility** before writing code, and export **clean PyTorch** ready for training. Ideal for **paper prototyping** and **ablation studies**.
+
+</td>
+<td width="33%">
+
+### 🏭 For Engineers
+Import **ONNX models** to visualize existing architectures, debug **shape mismatches** with the built-in validator, and generate **production-ready nn.Module code**. Great for **model review** and **onboarding**.
 
 </td>
 </tr>
 </table>
-
-### 🧱 30+ Built-in Layer Types
-
-<div align="center">
-
-| Category | Layers |
-|:--|:--|
-| **I/O** | `Input` · `Output` |
-| **Convolution** | `Conv2d` |
-| **Residual** | `ResidualBlock2d` · `ResNetBasicBlock` · `ResNetBottleneck` |
-| **Normalization** | `BatchNorm2d` · `LayerNorm` |
-| **Activation** | `ReLU` · `GELU` |
-| **Pooling** | `MaxPool2d` · `AdaptiveAvgPool2d` |
-| **Transformer** | `SelfAttention` · `TransformerEncoder` · `TransformerDecoder` · `PatchEmbedding` · `TokenPool` |
-| **Sequence** | `LSTM` · `GRU` |
-| **Embedding** | `Embedding` |
-| **Linear** | `Linear` · `Flatten` · `Dropout` |
-| **Merge** | `Add` · `Concat` |
-
-</div>
-
-### 📦 Import & Export
-
-<table>
-<tr>
-<td width="25%" align="center"><strong>📄 Graph JSON</strong><br /><small>Full round-trip</small></td>
-<td width="25%" align="center"><strong>🔥 PyTorch</strong><br /><small>nn.Module codegen</small></td>
-<td width="25%" align="center"><strong>🧩 ONNX</strong><br /><small>.onnx / .pb import</small></td>
-<td width="25%" align="center"><strong>📝 Text</strong><br /><small>.py / .txt import</small></td>
-</tr>
-</table>
-
-### 🌐 Quality of Life
-
-- **🇨🇳 🇺🇸 Chinese / English UI** — language switch with persistent preference
-- **💾 Sidebar state** — collapse/expand settings remembered across sessions
-- **📋 One-click copy** — Graph JSON and PyTorch code to clipboard
-- **⚡ 7 presets** — load classic architectures instantly
 
 <br />
 
@@ -107,7 +86,7 @@
 
 <br />
 
-## 🚀 <a id="quick-start"></a>Quick Start
+## 🚀 <a id="-quick-start"></a>Quick Start
 
 <div align="center">
 
@@ -118,7 +97,7 @@ npm install
 npm run dev
 ```
 
-Open **[http://localhost:5173](http://localhost:5173)** in your browser.
+Open **[http://localhost:5173](http://localhost:5173)** — you'll see a canvas with a single Input node. Start building.
 
 </div>
 
@@ -126,7 +105,7 @@ Open **[http://localhost:5173](http://localhost:5173)** in your browser.
 
 | Command | Description |
 |:--|:--|
-| `npm run dev` | Start dev server with HMR |
+| `npm run dev` | Start dev server with hot module replacement |
 | `npm run build` | Type-check & production build → `dist/` |
 | `npm run preview` | Preview the production build locally |
 | `npm run lint` | Run ESLint |
@@ -137,7 +116,80 @@ Open **[http://localhost:5173](http://localhost:5173)** in your browser.
 
 <br />
 
-## 🖥️ <a id="ui-layout"></a>UI Layout
+## ✨ <a id="-features"></a>Features
+
+<table>
+<tr>
+<td width="50%">
+
+### 🎨 Interactive Graph Canvas
+- **Drag-and-drop layer nodes** on an infinite React Flow canvas
+- **Fullscreen mode** — expand edge-to-edge for immersive model design
+- **Collapsible sidebars** — reclaim screen real estate when you need focus
+- **Horizontal ↔ Vertical layout** — switch reading direction in one click
+- **Inline connection menu** — drag from a port, search layers, insert mid-pipeline instantly
+- **Custom node rendering** — each layer type has its own visual identity with color coding
+
+</td>
+<td width="50%">
+
+### 🔬 Real-Time Model Inspection
+- **Per-node parameter count** — abbreviated on canvas, exact value in the inspector panel
+- **Live total parameter aggregation** — updates instantly as you add, edit, or reconnect nodes
+- **Forward tensor shape propagation** — input/output dimensions computed and displayed for every node
+- **Graph structure validator** — detects missing inputs/outputs, circular dependencies, isolated nodes, port mismatches, and shape incompatibilities
+- **Issue severity levels** — errors, warnings, and info hints with localized messages
+
+</td>
+</tr>
+</table>
+
+### 🧱 30+ Built-in Layer Types — Batteries Included
+
+<div align="center">
+
+| Category | Layers |
+|:--|:--|
+| **I/O** | `Input` · `Output` |
+| **Convolution** | `Conv2d` |
+| **Residual Blocks** | `ResidualBlock2d` · `ResNetBasicBlock` · `ResNetBottleneck` |
+| **Normalization** | `BatchNorm2d` · `LayerNorm` |
+| **Activation Functions** | `ReLU` · `GELU` |
+| **Pooling** | `MaxPool2d` · `AdaptiveAvgPool2d` |
+| **Transformer Family** | `SelfAttention` · `TransformerEncoder` · `TransformerDecoder` · `PatchEmbedding` · `TokenPool` |
+| **Recurrent Networks** | `LSTM` · `GRU` |
+| **Embeddings** | `Embedding` |
+| **Linear & Regularization** | `Linear` · `Flatten` · `Dropout` |
+| **Fusion Ops** | `Add` (residual/skip) · `Concat` (multi-branch) |
+
+</div>
+
+### 📦 Import & Export — Plays Well with Your Workflow
+
+<table>
+<tr>
+<td width="25%" align="center"><strong>📄 Graph JSON</strong><br /><small>Full round-trip serialization<br />Edit in any text editor</small></td>
+<td width="25%" align="center"><strong>🔥 PyTorch Code</strong><br /><small>Clean nn.Module generation<br />Ready for training</small></td>
+<td width="25%" align="center"><strong>🧩 ONNX Models</strong><br /><small>Import .onnx / .pb files<br />Visualize existing models</small></td>
+<td width="25%" align="center"><strong>📝 Text Definitions</strong><br /><small>Parse .py / .txt model specs<br />Migrate legacy code</small></td>
+</tr>
+</table>
+
+### 🌐 Quality of Life
+
+- **🇨🇳 🇺🇸 Bilingual UI** — Chinese / English switch with persistent preference (localStorage)
+- **💾 Remembered State** — sidebar collapse and locale survive page reloads
+- **📋 One-Click Copy** — Graph JSON and PyTorch code straight to clipboard
+- **⚡ 7 Model Presets** — load classic architectures as starting points
+- **🎯 Zero Dependencies on Backend** — runs entirely in the browser, no Python required
+
+<br />
+
+---
+
+<br />
+
+## 🖥️ <a id="-ui-layout"></a>UI Layout
 
 <pre align="center" style="background:#0f172a;color:#e2e8f0;padding:1.5rem;border-radius:16px;font-size:0.82rem;line-height:1.6;overflow-x:auto;">
 ┌──────────────────────────────────────────────────────────────────┐
@@ -151,12 +203,12 @@ Open **[http://localhost:5173](http://localhost:5173)** in your browser.
 │  Quick Add    │                              │  Inspector         │
 │  ┌──────────┐ │   ┌────┐   ┌──────┐  ┌────┐ │  · name            │
 │  │ Conv2d   │ │   │    │   │      │  │    │ │  · params          │
-│  │ ReLU     │ │   │ In │──▶│ Conv │─▶│Out │ │  · shapes          │
+│  │ ReLU     │ │   │ In │──▶│ Conv │─▶│Out │ │  · tensor shapes   │
 │  │ Linear   │ │   │    │   │      │  │    │ │                    │
 │  │ ...      │ │   └────┘   └──────┘  └────┘ │  Validator         │
 │  └──────────┘ │                              │  · errors          │
 │               │   <b style="color:#94a3b8">[⛶ Fullscreen]</b>             │  · warnings        │
-│  Model        │                              │                    │
+│  Model        │                              │  · info            │
 │  Presets      ├──────────────────────────────┤                    │
 │  ┌──────────┐ │                              │                    │
 │  │ ResNet-18│ │  Export & Import Panel       │                    │
@@ -173,19 +225,21 @@ Open **[http://localhost:5173](http://localhost:5173)** in your browser.
 
 <br />
 
-## 🎯 <a id="presets"></a>Built-in Presets
+## 🎯 <a id="-presets"></a>Built-in Model Presets
+
+> One click to load a complete, ready-to-edit architecture.
 
 <div align="center">
 
-| Preset | Architecture | Description |
+| Preset | Architecture | Use Case |
 |:--|:--|:--|
-| 🟦 **Simple CNN** | `Input` only | Blank canvas — build from scratch |
-| 🟩 **ResNet-18** | BasicBlock × 8 | Classic 18-layer residual network |
-| 🟩 **ResNet-50** | Bottleneck × 16 | Deep 50-layer residual backbone |
-| 🟨 **VGG-16** | 13×Conv + 3×FC | Conv-pool stack with classifier head |
-| 🟪 **LSTM Classifier** | BiLSTM → Linear | Text / time-series classification |
-| 🟧 **Transformer Seq2Seq** | Encoder + Decoder | Dual-input seq2seq with cross-attention |
-| 🟥 **DINOv3-style ViT** | PatchEmbed + Encoder | Modern vision transformer backbone |
+| 🟦 **Simple CNN** | `Input` only | Blank slate — build from scratch |
+| 🟩 **ResNet-18** | BasicBlock × 8 | Image classification, transfer learning |
+| 🟩 **ResNet-50** | Bottleneck × 16 | Deep feature extraction, object detection backbone |
+| 🟨 **VGG-16** | 13×Conv + 3×FC | Classic baseline, style transfer |
+| 🟪 **LSTM Classifier** | BiLSTM → Linear | Sentiment analysis, time-series forecasting |
+| 🟧 **Transformer Seq2Seq** | Encoder + Decoder | Machine translation, text summarization |
+| 🟥 **DINOv3-style ViT** | PatchEmbed + Encoder | Modern vision transformer, self-supervised learning |
 
 </div>
 
@@ -195,23 +249,23 @@ Open **[http://localhost:5173](http://localhost:5173)** in your browser.
 
 <br />
 
-## 📁 <a id="structure"></a>Project Structure
+## 📁 <a id="-project-structure"></a>Project Structure
 
 <pre style="background:#0f172a;color:#e2e8f0;padding:1.2rem;border-radius:12px;font-size:0.84rem;line-height:1.7;overflow-x:auto;">
 <b style="color:#60a5fa">src/</b>
 ├── <b style="color:#60a5fa">core/</b>
-│   ├── codegen/          <b style="color:#94a3b8">PyTorch nn.Module code generation</b>
-│   ├── graph/            <b style="color:#94a3b8">NeuralGraph types · parameter counting</b>
-│   ├── import/           <b style="color:#94a3b8">ONNX / text model definition parser</b>
-│   ├── registry/         <b style="color:#94a3b8">Layer definitions &amp; default params</b>
-│   ├── serialize/        <b style="color:#94a3b8">Graph JSON serialization</b>
-│   ├── shape/            <b style="color:#94a3b8">Forward tensor shape inference</b>
-│   └── validate/         <b style="color:#94a3b8">Graph structural validation</b>
-├── <b style="color:#60a5fa">editor/</b>              <b style="color:#94a3b8">Canvas, sidebars, inspector, export UI</b>
-├── <b style="color:#60a5fa">examples/</b>           <b style="color:#94a3b8">7 model presets + default graph</b>
-├── i18n.ts               <b style="color:#94a3b8">Chinese / English translations</b>
-├── App.tsx               <b style="color:#94a3b8">Main application shell</b>
-└── App.css               <b style="color:#94a3b8">Global styles with CSS custom properties</b>
+│   ├── codegen/          <b style="color:#94a3b8">→ generatePyTorch.ts — nn.Module code emitter</b>
+│   ├── graph/            <b style="color:#94a3b8">→ NeuralGraph types, parameter counting</b>
+│   ├── import/           <b style="color:#94a3b8">→ ONNX / text model definition parser</b>
+│   ├── registry/         <b style="color:#94a3b8">→ Layer definitions &amp; default parameters</b>
+│   ├── serialize/        <b style="color:#94a3b8">→ Graph JSON serialization / deserialization</b>
+│   ├── shape/            <b style="color:#94a3b8">→ Forward tensor shape inference engine</b>
+│   └── validate/         <b style="color:#94a3b8">→ Graph structural rule checker</b>
+├── <b style="color:#60a5fa">editor/</b>              <b style="color:#94a3b8">→ Canvas, sidebars, inspector, export UI components</b>
+├── <b style="color:#60a5fa">examples/</b>           <b style="color:#94a3b8">→ 7 model presets + default blank graph</b>
+├── i18n.ts               <b style="color:#94a3b8">→ Chinese / English translation tables</b>
+├── App.tsx               <b style="color:#94a3b8">→ Main application shell &amp; state management</b>
+└── App.css               <b style="color:#94a3b8">→ Global styles (CSS custom properties, responsive)</b>
 </pre>
 
 <br />
@@ -220,33 +274,35 @@ Open **[http://localhost:5173](http://localhost:5173)** in your browser.
 
 <br />
 
-## 🗺️ <a id="roadmap"></a>Roadmap
+## 🗺️ <a id="-roadmap"></a>Roadmap
 
 <table>
 <tr>
 <td width="33%">
 
 ### 🔜 Short Term
-- Stricter port-type validation
-- Delete node / delete edge
-- Undo / redo
+- Stricter port-type compatibility checks
+- Delete node / delete edge interactions
+- Undo / redo history stack
 
 </td>
 <td width="33%">
 
 ### 📋 Medium Term
-- Multi-branch codegen for `Add` / `Concat`
-- FLOPs estimation
-- Node search & filter
+- Multi-branch codegen for `Add` / `Concat` fusion
+- FLOPs / MACs estimation
+- Node search & filter across large graphs
+- Keyboard shortcuts
 
 </td>
 <td width="33%">
 
 ### 🌟 Long Term
-- IndexedDB persistence
+- IndexedDB local persistence & auto-save
 - `.json` / `.py` file download
-- Training config export
-- TensorBoard graph export
+- Training configuration export (optimizer, loss, scheduler)
+- TensorBoard graph protocol export
+- Collaborative editing (CRDT / WebSocket)
 
 </td>
 </tr>
@@ -264,12 +320,14 @@ Open **[http://localhost:5173](http://localhost:5173)** in your browser.
 
 | Layer | Choice |
 |:--|:--|
-| **Canvas** | [React Flow](https://reactflow.dev) (`@xyflow/react`) |
+| **Graph Canvas** | [React Flow](https://reactflow.dev) (`@xyflow/react` v12) |
 | **UI Framework** | React 19 + TypeScript 6 |
-| **Build Tool** | Vite 8 |
-| **Code Generation** | Template-based PyTorch `nn.Module` emitter |
-| **ONNX Parsing** | `onnx-proto` |
-| **Styling** | Plain CSS + custom properties |
+| **Build Tool** | Vite 8 (Rolldown) |
+| **Code Generation** | Template-driven PyTorch `nn.Module` emitter |
+| **ONNX Parsing** | `onnx-proto` (protobuf decoding) |
+| **Unique IDs** | `nanoid` |
+| **Styling** | Plain CSS + custom properties + glassmorphism design |
+| **I18n** | Custom lightweight solution (no framework dependency) |
 
 </div>
 
@@ -281,6 +339,18 @@ Open **[http://localhost:5173](http://localhost:5173)** in your browser.
 
 <br />
 
+## 🏷️ Keywords
+
+<sub>
+`neural network editor` · `visual model builder` · `PyTorch designer` · `deep learning canvas` ·
+`no-code AI` · `drag-and-drop neural network` · `CNN architect` · `Transformer visualizer` ·
+`model architecture tool` · `ONNX viewer` · `ResNet builder` · `LSTM designer` ·
+`deep learning education` · `model prototyping` · `graph-based NN editor` ·
+`open source` · `React Flow` · `TypeScript` · `browser-based` · `research tool`
+</sub>
+
+<br /><br />
+
 ## 📄 License
 
 **[MIT](LICENSE)** © 2026 NasNeo
@@ -291,6 +361,8 @@ Open **[http://localhost:5173](http://localhost:5173)** in your browser.
   <a href="README_CN.md">📖 中文文档</a>
   &nbsp;·&nbsp;
   <a href="https://github.com/NasNeo/NNMind">⭐ Star on GitHub</a>
+  &nbsp;·&nbsp;
+  <a href="https://github.com/NasNeo/NNMind/issues">🐛 Report Bug</a>
 </p>
 
 <br />

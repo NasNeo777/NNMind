@@ -118,6 +118,10 @@ export default function App() {
     getStoredPanelState("nnmind-right-sidebar-collapsed", false),
   )
   const [isCanvasFullscreen, setCanvasFullscreen] = useState(false)
+  const [inspectorPopup, setInspectorPopup] = useState<{
+    nodeId: string
+    position: XYPosition
+  } | null>(null)
 
   const text = getUiText(locale)
   const flowSurfaceRef = useRef<HTMLDivElement | null>(null)
@@ -133,6 +137,19 @@ export default function App() {
   useEffect(() => {
     window.localStorage.setItem("nnmind-right-sidebar-collapsed", String(rightSidebarCollapsed))
   }, [rightSidebarCollapsed])
+
+  useEffect(() => {
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        setInspectorPopup(null)
+        setPendingConnectionMenu(null)
+        setPendingConnectionQuery("")
+      }
+    }
+
+    window.addEventListener("keydown", handleKeyDown)
+    return () => window.removeEventListener("keydown", handleKeyDown)
+  }, [])
 
   const graph = useMemo(() => canvasToGraph(nodes, edges), [edges, nodes])
   const inference = useMemo(() => inferGraph(graph), [graph])
@@ -167,6 +184,9 @@ export default function App() {
   const graphJson = useMemo(() => serializeGraph(graph), [graph])
   const pythonCode = useMemo(() => generatePyTorch(graph), [graph])
   const selectedNode = decoratedNodes.find((node) => node.id === selectedNodeId)
+  const inspectorPopupNode = inspectorPopup
+    ? decoratedNodes.find((node) => node.id === inspectorPopup.nodeId)
+    : null
   const connectionMenuLayers = useMemo(() => {
     if (!pendingConnectionMenu) {
       return []
@@ -455,6 +475,25 @@ export default function App() {
     fitCanvasSoon()
   }
 
+  function handleNodeContextMenu(
+    event: React.MouseEvent,
+    node: CanvasNode,
+  ) {
+    event.preventDefault()
+    const surfaceRect = flowSurfaceRef.current?.getBoundingClientRect()
+    const popupWidth = 340
+    const popupHeight = 480
+    const rawX = event.clientX - (surfaceRect?.left ?? 0)
+    const rawY = event.clientY - (surfaceRect?.top ?? 0)
+    setInspectorPopup({
+      nodeId: node.id,
+      position: {
+        x: Math.min(Math.max(rawX, 8), Math.max(8, (surfaceRect?.width ?? window.innerWidth) - popupWidth - 8)),
+        y: Math.min(Math.max(rawY, 8), Math.max(8, (surfaceRect?.height ?? 640) - popupHeight - 8)),
+      },
+    })
+  }
+
   return (
     <main className={`app-shell${isCanvasFullscreen ? " is-canvas-fullscreen" : ""}`}>
       <header className="topbar">
@@ -580,8 +619,15 @@ export default function App() {
                 onEdgesChange={onEdgesChange}
                 onConnect={handleConnect}
                 onConnectEnd={handleConnectEnd}
-                onNodeClick={(_, node) => setSelectedNodeId(node.id)}
-                onPaneClick={() => setSelectedNodeId(null)}
+                onNodeClick={(_, node) => {
+                  setSelectedNodeId(node.id)
+                  setInspectorPopup(null)
+                }}
+                onNodeContextMenu={(event, node) => handleNodeContextMenu(event, node)}
+                onPaneClick={() => {
+                  setSelectedNodeId(null)
+                  setInspectorPopup(null)
+                }}
                 onInit={setFlowInstance}
                 fitView
                 nodeTypes={nodeTypes}
@@ -647,6 +693,34 @@ export default function App() {
                         </button>
                       ))
                     )}
+                  </div>
+                </div>
+              ) : null}
+              {inspectorPopupNode ? (
+                <div
+                  className="inspector-popup"
+                  style={{
+                    left: inspectorPopup.position.x,
+                    top: inspectorPopup.position.y,
+                  }}
+                >
+                  <div className="inspector-popup__header">
+                    <strong>{inspectorPopupNode.data.label}</strong>
+                    <button
+                      type="button"
+                      className="inspector-popup__close"
+                      onClick={() => setInspectorPopup(null)}
+                    >
+                      ✕
+                    </button>
+                  </div>
+                  <div className="inspector-popup__body">
+                    <Inspector
+                      locale={locale}
+                      node={inspectorPopupNode}
+                      onUpdateName={handleUpdateName}
+                      onUpdateParam={handleUpdateParam}
+                    />
                   </div>
                 </div>
               ) : null}
