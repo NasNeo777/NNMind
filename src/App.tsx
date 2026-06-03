@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, startTransition } from "react"
+import { useEffect, useMemo, useState, startTransition, type CSSProperties } from "react"
 import {
   addEdge,
   Background,
@@ -357,8 +357,19 @@ export default function App() {
         </div>
       </header>
 
-      <section className="workspace-shell">
-        <aside className={`sidebar sidebar--left ${leftSidebarCollapsed ? "is-collapsed" : ""}`}>
+      <section
+        className="workspace-shell"
+        style={
+          {
+            "--left-sidebar-width": leftSidebarCollapsed ? "88px" : "320px",
+            "--right-sidebar-width": rightSidebarCollapsed ? "88px" : "360px",
+          } as CSSProperties
+        }
+      >
+        <aside
+          className={`sidebar sidebar--left ${leftSidebarCollapsed ? "is-collapsed" : ""}`}
+          style={{ "--sidebar-width": leftSidebarCollapsed ? "88px" : "320px" } as CSSProperties}
+        >
           <div className="sidebar__header">
             <div>
               <span className="sidebar__eyebrow">{text.leftSidebar}</span>
@@ -436,7 +447,10 @@ export default function App() {
           />
         </div>
 
-        <aside className={`sidebar sidebar--right ${rightSidebarCollapsed ? "is-collapsed" : ""}`}>
+        <aside
+          className={`sidebar sidebar--right ${rightSidebarCollapsed ? "is-collapsed" : ""}`}
+          style={{ "--sidebar-width": rightSidebarCollapsed ? "88px" : "360px" } as CSSProperties}
+        >
           <div className="sidebar__header">
             <div>
               <span className="sidebar__eyebrow">{text.rightSidebar}</span>

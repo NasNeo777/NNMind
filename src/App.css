@@ -196,7 +196,7 @@ button:hover {
 
 .workspace-shell {
   display: grid;
-  grid-template-columns: minmax(288px, 320px) minmax(0, 1fr) minmax(320px, 360px);
+  grid-template-columns: var(--left-sidebar-width, 320px) minmax(0, 1fr) var(--right-sidebar-width, 360px);
   gap: 1rem;
   align-items: start;
 }
@@ -212,6 +212,8 @@ button:hover {
 }
 
 .sidebar {
+  width: var(--sidebar-width, 320px);
+  min-width: 0;
   display: grid;
   gap: 1rem;
   padding: 1rem;
