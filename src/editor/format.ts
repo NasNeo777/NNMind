@@ -4,7 +4,7 @@ export function formatTensorShape(shape: TensorShape): string {
   return `[${shape.map((dim) => String(dim)).join(", ")}]`
 }
 
-export function formatTensorSpec(spec: TensorSpec | undefined): string {
+export function formatTensorSpec(spec: TensorSpec | null | undefined): string {
   if (!spec) {
     return "Unknown"
   }

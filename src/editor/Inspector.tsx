@@ -1,4 +1,5 @@
 import { getLayerDef } from "../core/registry/layerRegistry"
+import { formatParamCount } from "../core/graph/paramCount"
 import type { ParamValue } from "../core/graph/types"
 import { formatTensorSpec } from "./format"
 import type { CanvasNode } from "./types"
@@ -55,6 +56,7 @@ export function Inspector({ node, onUpdateName, onUpdateParam }: InspectorProps)
       <div className="panel__header">
         <h2>{node.data.label}</h2>
         <p>{node.data.description}</p>
+        <p className="panel__meta">{formatParamCount(node.data.paramCount ?? 0)} params</p>
       </div>
 
       <label className="field">
@@ -117,14 +119,18 @@ export function Inspector({ node, onUpdateName, onUpdateParam }: InspectorProps)
       })}
 
       <div className="inspector-specs">
-        <div>
-          <strong>Input</strong>
-          <span>{formatTensorSpec(node.data.specs?.inputs[0])}</span>
-        </div>
-        <div>
-          <strong>Output</strong>
-          <span>{formatTensorSpec(node.data.specs?.outputs[0])}</span>
-        </div>
+        {layerDef.inputs.map((port, index) => (
+          <div key={`input-${port.name}`}>
+            <strong>Input · {port.name}</strong>
+            <span>{formatTensorSpec(node.data.specs?.inputs[index])}</span>
+          </div>
+        ))}
+        {layerDef.outputs.map((port, index) => (
+          <div key={`output-${port.name}`}>
+            <strong>Output · {port.name}</strong>
+            <span>{formatTensorSpec(node.data.specs?.outputs[index])}</span>
+          </div>
+        ))}
       </div>
     </section>
   )

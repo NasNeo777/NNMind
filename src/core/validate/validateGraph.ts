@@ -1,5 +1,6 @@
 import { getIncomingEdges, getOutgoingEdges, topologicalSort } from "../graph/utils"
 import type { GraphIssue, NeuralGraph } from "../graph/types"
+import { getLayerDef } from "../registry/layerRegistry"
 import { inferGraph } from "../shape/inferShape"
 
 export function validateGraph(graph: NeuralGraph): GraphIssue[] {
@@ -12,7 +13,7 @@ export function validateGraph(graph: NeuralGraph): GraphIssue[] {
   }
 
   if (inputNodes.length > 1) {
-    issues.push({ level: "warning", message: "当前存在多个 Input 节点，MVP codegen 只保证单输入主链路。" })
+    issues.push({ level: "info", message: "当前图包含多个 Input 节点，适合编解码器等多输入结构。" })
   }
 
   if (outputNodes.length === 0) {
@@ -29,6 +30,7 @@ export function validateGraph(graph: NeuralGraph): GraphIssue[] {
     const incoming = getIncomingEdges(graph, node.id)
     const outgoing = getOutgoingEdges(graph, node.id)
     const isConnected = incoming.length > 0 || outgoing.length > 0
+    const layerDef = getLayerDef(node.layerType)
 
     if (!isConnected) {
       issues.push({
@@ -51,6 +53,14 @@ export function validateGraph(graph: NeuralGraph): GraphIssue[] {
         level: "error",
         nodeId: node.id,
         message: "Output 不应该有出边。",
+      })
+    }
+
+    if (node.layerType !== "Input" && incoming.length < layerDef.inputs.length) {
+      issues.push({
+        level: "warning",
+        nodeId: node.id,
+        message: `${node.name} 需要 ${layerDef.inputs.length} 个输入端口，当前只有 ${incoming.length} 个连接。`,
       })
     }
   }

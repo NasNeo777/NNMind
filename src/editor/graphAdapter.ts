@@ -1,22 +1,27 @@
 import type { Edge, XYPosition } from "@xyflow/react"
 import { nanoid } from "nanoid"
-import type { GraphEdge, LayerNode, LayerType, NeuralGraph } from "../core/graph/types"
+import type { GraphEdge, GraphLayoutMode, LayerNode, LayerType, NeuralGraph } from "../core/graph/types"
 import { createDefaultParams, getLayerDef } from "../core/registry/layerRegistry"
+import { getPortPositions, orientPosition } from "./layout"
 import type { CanvasNode } from "./types"
 
 export function buildCanvasNode(
   layerType: LayerType,
   index: number,
-  position: XYPosition = { x: 120 + index * 40, y: 120 + (index % 4) * 90 },
+  layoutMode: GraphLayoutMode,
+  position: XYPosition = orientPosition(120 + index * 220, 120 + (index % 3) * 120, layoutMode),
 ): CanvasNode {
   const layerDef = getLayerDef(layerType)
   const id = nanoid(8)
   const name = layerType === "Input" || layerType === "Output" ? layerType.toLowerCase() : `${layerType.toLowerCase()}_${index + 1}`
+  const { source, target } = getPortPositions(layoutMode)
 
   return {
     id,
     type: "layerNode",
     position,
+    sourcePosition: source,
+    targetPosition: target,
     data: {
       name,
       layerType,
@@ -24,18 +29,24 @@ export function buildCanvasNode(
       accent: layerDef.accent,
       label: layerDef.label,
       description: layerDef.description,
+      layoutMode,
     },
   }
 }
 
-export function graphToCanvasNodes(graph: NeuralGraph): CanvasNode[] {
+export function graphToCanvasNodes(graph: NeuralGraph, layoutMode: GraphLayoutMode): CanvasNode[] {
+  const { source, target } = getPortPositions(layoutMode)
+
   return graph.nodes.map((node) => {
     const layerDef = getLayerDef(node.layerType)
+    const position = orientPosition(node.position.x, node.position.y, layoutMode)
 
     return {
       id: node.id,
       type: "layerNode",
-      position: node.position,
+      position,
+      sourcePosition: source,
+      targetPosition: target,
       data: {
         name: node.name,
         layerType: node.layerType,
@@ -43,6 +54,7 @@ export function graphToCanvasNodes(graph: NeuralGraph): CanvasNode[] {
         accent: layerDef.accent,
         label: layerDef.label,
         description: layerDef.description,
+        layoutMode,
       },
     }
   })

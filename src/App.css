@@ -107,6 +107,12 @@ button {
   align-items: start;
 }
 
+.left-stack,
+.side-stack {
+  display: grid;
+  gap: 1rem;
+}
+
 .panel,
 .canvas-panel {
   border: 1px solid rgba(148, 163, 184, 0.32);
@@ -128,6 +134,35 @@ button {
 .palette-grid {
   display: grid;
   gap: 0.75rem;
+}
+
+.preset-grid {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.preset-card {
+  display: grid;
+  gap: 0.3rem;
+  justify-items: start;
+  padding: 0.95rem 1rem;
+  border: 1px solid rgba(148, 163, 184, 0.3);
+  background: linear-gradient(160deg, rgba(20, 184, 166, 0.08), rgba(255, 255, 255, 0.92));
+  color: #0f172a;
+}
+
+.preset-card__family {
+  color: #0f766e;
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 0.72rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.preset-card__description {
+  color: #526277;
+  font-size: 0.85rem;
+  text-align: left;
 }
 
 .palette-card {
@@ -162,11 +197,6 @@ button {
   border-radius: 22px;
   overflow: hidden;
   background: linear-gradient(180deg, rgba(248, 250, 252, 0.96), rgba(233, 241, 248, 0.96));
-}
-
-.side-stack {
-  display: grid;
-  gap: 1rem;
 }
 
 .field {
@@ -206,7 +236,7 @@ button {
 
 .tuple-input {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(64px, 1fr));
   gap: 0.5rem;
 }
 
@@ -329,7 +359,7 @@ button {
   font-size: 0.88rem;
 }
 
-.layer-node__shapes {
+.layer-node__ports {
   display: grid;
   gap: 0.3rem;
   font-family: "IBM Plex Mono", monospace;

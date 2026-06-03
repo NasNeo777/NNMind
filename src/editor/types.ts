@@ -1,5 +1,5 @@
 import type { Node } from "@xyflow/react"
-import type { GraphIssue, LayerType, ParamValue, TensorSpec } from "../core/graph/types"
+import type { GraphIssue, GraphLayoutMode, LayerType, ParamValue, TensorSpec } from "../core/graph/types"
 
 export type CanvasNodeData = {
   name: string
@@ -8,8 +8,10 @@ export type CanvasNodeData = {
   accent: string
   label: string
   description: string
+  layoutMode: GraphLayoutMode
+  paramCount?: number
   specs?: {
-    inputs: TensorSpec[]
+    inputs: Array<TensorSpec | null>
     outputs: TensorSpec[]
   }
   issueLevel?: GraphIssue["level"]

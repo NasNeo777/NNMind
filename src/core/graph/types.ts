@@ -9,26 +9,42 @@ export type TensorSpec = {
   shape: TensorShape
 }
 
+export type GraphLayoutMode = "horizontal" | "vertical"
+
 export type LayerType =
   | "Input"
+  | "Embedding"
   | "Conv2d"
+  | "ResidualBlock2d"
   | "BatchNorm2d"
+  | "LayerNorm"
   | "ReLU"
+  | "GELU"
   | "MaxPool2d"
   | "AdaptiveAvgPool2d"
+  | "PatchEmbedding"
+  | "TokenPool"
   | "Flatten"
   | "Linear"
   | "Dropout"
+  | "LSTM"
+  | "GRU"
+  | "TransformerEncoder"
+  | "TransformerDecoder"
   | "Add"
   | "Concat"
   | "Output"
 
 export type LayerCategory =
   | "input"
+  | "embedding"
   | "conv"
+  | "residual"
   | "norm"
   | "activation"
   | "pool"
+  | "transformer"
+  | "sequence"
   | "reshape"
   | "linear"
   | "merge"
@@ -82,7 +98,7 @@ export type InferenceResult = {
   specsByNodeId: Record<
     string,
     {
-      inputs: TensorSpec[]
+      inputs: Array<TensorSpec | null>
       outputs: TensorSpec[]
     }
   >
