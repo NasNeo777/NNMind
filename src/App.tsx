@@ -15,7 +15,7 @@ import {
 import { generatePyTorch } from "./core/codegen/generatePyTorch"
 import { estimateNodeParamCount, formatParamCount } from "./core/graph/paramCount"
 import type { GraphLayoutMode, NeuralGraph, ParamValue } from "./core/graph/types"
-import { importModelSource } from "./core/import/importModel"
+import { importModelSource, importOnnxBuffer } from "./core/import/importModel"
 import { getLayerDef } from "./core/registry/layerRegistry"
 import { serializeGraph, parseGraphJson } from "./core/serialize/graphJson"
 import { inferGraph } from "./core/shape/inferShape"
@@ -221,13 +221,15 @@ export default function App() {
     const lowerName = file.name.toLowerCase()
 
     if (lowerName.endsWith(".pt") || lowerName.endsWith(".pth") || lowerName.endsWith(".ckpt")) {
-      window.alert("Binary checkpoint files are not supported yet. Please import Graph JSON or a PyTorch .py model definition file.")
+      window.alert("Checkpoint weights are not supported yet. Please import Graph JSON, PyTorch .py, ONNX, or a text model definition file.")
       return
     }
 
     try {
-      const text = await file.text()
-      const importedGraph = importModelSource(text, layoutMode)
+      const importedGraph =
+        lowerName.endsWith(".onnx") || lowerName.endsWith(".pb")
+          ? importOnnxBuffer(await file.arrayBuffer(), layoutMode)
+          : importModelSource(await file.text(), layoutMode)
       loadGraph(importedGraph)
     } catch (error) {
       const message = error instanceof Error ? error.message : "Import failed."
@@ -280,41 +282,41 @@ export default function App() {
         </div>
       </header>
 
-      <section className="workspace-grid">
-        <div className="left-stack">
-          <PresetLibrary presets={modelPresets} onLoadPreset={(preset) => loadGraph(preset.graph)} />
-          <LayerPalette onAddLayer={handleAddLayer} selectedNodeName={selectedNode?.data.name} />
-        </div>
+      <LayerPalette onAddLayer={handleAddLayer} selectedNodeName={selectedNode?.data.name} />
 
-        <section className="canvas-panel">
-          <div className="canvas-panel__header">
-            <div>
-              <h2>Graph Canvas</h2>
-              <p>
-                Layout {layoutMode} · Nodes {nodes.length} · Edges {edges.length} · Issues {issues.length} · Params {formatParamCount(totalParamCount)}
-              </p>
+      <section className="workspace-grid">
+        <div className="main-stack">
+          <PresetLibrary presets={modelPresets} onLoadPreset={(preset) => loadGraph(preset.graph)} />
+          <section className="canvas-panel">
+            <div className="canvas-panel__header">
+              <div>
+                <h2>Graph Canvas</h2>
+                <p>
+                  Layout {layoutMode} · Nodes {nodes.length} · Edges {edges.length} · Issues {issues.length} · Params {formatParamCount(totalParamCount)}
+                </p>
+              </div>
             </div>
-          </div>
-          <div className="flow-surface">
-            <ReactFlow
-              nodes={decoratedNodes}
-              edges={edges}
-              onNodesChange={onNodesChange}
-              onEdgesChange={onEdgesChange}
-              onConnect={handleConnect}
-              onNodeClick={(_, node) => setSelectedNodeId(node.id)}
-              onPaneClick={() => setSelectedNodeId(null)}
-              onInit={setFlowInstance}
-              fitView
-              nodeTypes={nodeTypes}
-              proOptions={{ hideAttribution: true }}
-            >
-              <Background gap={24} size={1} color="#cbd5e1" />
-              <Controls />
-              <MiniMap pannable zoomable />
-            </ReactFlow>
-          </div>
-        </section>
+            <div className="flow-surface">
+              <ReactFlow
+                nodes={decoratedNodes}
+                edges={edges}
+                onNodesChange={onNodesChange}
+                onEdgesChange={onEdgesChange}
+                onConnect={handleConnect}
+                onNodeClick={(_, node) => setSelectedNodeId(node.id)}
+                onPaneClick={() => setSelectedNodeId(null)}
+                onInit={setFlowInstance}
+                fitView
+                nodeTypes={nodeTypes}
+                proOptions={{ hideAttribution: true }}
+              >
+                <Background gap={24} size={1} color="#cbd5e1" />
+                <Controls />
+                <MiniMap pannable zoomable />
+              </ReactFlow>
+            </div>
+          </section>
+        </div>
 
         <div className="side-stack">
           <Inspector node={selectedNode} onUpdateName={handleUpdateName} onUpdateParam={handleUpdateParam} />

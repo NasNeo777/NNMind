@@ -1,3 +1,4 @@
+import onnxProto from "onnx-proto"
 import type { GraphLayoutMode, GraphEdge, LayerNode, LayerType, NeuralGraph, ParamValue } from "../graph/types"
 import { createDefaultParams } from "../registry/layerRegistry"
 
@@ -227,6 +228,32 @@ function parseModuleDefinition(moduleName: string, className: string, args: stri
       params.stride = parsed.named.get("stride") ?? parsed.positional[2] ?? params.stride
       params.use_projection = parsed.named.get("use_projection") ?? params.use_projection
       return { layerType: "ResidualBlock2d", name: moduleName, params }
+    }
+    case "ResNetBasicBlock":
+    case "BasicBlock": {
+      const params = createDefaultParams("ResNetBasicBlock")
+      params.in_channels = parsed.positional[0] ?? params.in_channels
+      params.out_channels = parsed.positional[1] ?? params.out_channels
+      params.stride = parsed.named.get("stride") ?? parsed.positional[2] ?? params.stride
+      params.use_projection = parsed.named.get("use_projection") ?? params.use_projection
+      return { layerType: "ResNetBasicBlock", name: moduleName, params }
+    }
+    case "ResNetBottleneck":
+    case "Bottleneck": {
+      const params = createDefaultParams("ResNetBottleneck")
+      params.in_channels = parsed.positional[0] ?? params.in_channels
+      params.bottleneck_channels = parsed.positional[1] ?? params.bottleneck_channels
+      params.out_channels = parsed.positional[2] ?? params.out_channels
+      params.stride = parsed.named.get("stride") ?? parsed.positional[3] ?? params.stride
+      params.use_projection = parsed.named.get("use_projection") ?? params.use_projection
+      return { layerType: "ResNetBottleneck", name: moduleName, params }
+    }
+    case "MultiheadAttention": {
+      const params = createDefaultParams("SelfAttention")
+      params.embed_dim = parsed.named.get("embed_dim") ?? parsed.positional[0] ?? params.embed_dim
+      params.num_heads = parsed.named.get("num_heads") ?? parsed.positional[1] ?? params.num_heads
+      params.batch_first = parsed.named.get("batch_first") ?? params.batch_first
+      return { layerType: "SelfAttention", name: moduleName, params }
     }
     default:
       return null
@@ -472,6 +499,258 @@ export function importModelSource(raw: string, layoutMode: GraphLayoutMode): Neu
     toNodeId: outputId,
     toPort: "in",
   })
+
+  return {
+    version: 1,
+    framework: "pytorch",
+    nodes,
+    edges,
+  }
+}
+
+type OnnxAttributeValue = number | number[] | string | undefined
+
+function onnxDtypeToEditorDtype(elemType?: number) {
+  if (elemType === 7) {
+    return "int64"
+  }
+
+  return "float32"
+}
+
+function shapeFromOnnx(valueInfo: any) {
+  const dims = valueInfo?.type?.tensorType?.shape?.dim
+  if (!Array.isArray(dims) || dims.length === 0) {
+    return ["B", 3, 224, 224]
+  }
+
+  return dims.map((dim: any) => {
+    const numericValue = Number(dim?.dimValue)
+    if (Number.isFinite(numericValue) && numericValue > 0) {
+      return numericValue
+    }
+    if (typeof dim?.dimParam === "string" && dim.dimParam.trim()) {
+      return dim.dimParam.trim()
+    }
+    return "B"
+  })
+}
+
+function getOnnxAttributeMap(node: any): Map<string, OnnxAttributeValue> {
+  const attributes = new Map<string, OnnxAttributeValue>()
+
+  for (const attribute of node.attribute ?? []) {
+    const name = attribute.name
+    if (!name) continue
+    const intValue = Number(attribute.i)
+    if (Number.isFinite(intValue) && intValue !== 0) {
+      attributes.set(name, intValue)
+      continue
+    }
+    if (typeof attribute.f === "number" && attribute.f !== 0) {
+      attributes.set(name, attribute.f)
+      continue
+    }
+    if (Array.isArray(attribute.ints) && attribute.ints.length > 0) {
+      attributes.set(name, attribute.ints.map((value: any) => Number(value)))
+      continue
+    }
+    if (attribute.s) {
+      const decoded = typeof attribute.s === "string" ? attribute.s : new TextDecoder().decode(attribute.s)
+      attributes.set(name, decoded)
+    }
+  }
+
+  return attributes
+}
+
+function mapOnnxNodeToLayer(node: any, initializerMap: Map<string, any>): { layerType: LayerType; params: Record<string, ParamValue> } | null {
+  const opType = node.opType
+  const attrs = getOnnxAttributeMap(node)
+
+  switch (opType) {
+    case "Conv": {
+      const weight = initializerMap.get(node.input?.[1] ?? "")
+      const outChannels = Array.isArray(weight?.dims) ? Number(weight.dims[0]) : 32
+      const inChannels = Array.isArray(weight?.dims) ? Number(weight.dims[1]) : 3
+      const kernel = Array.isArray(weight?.dims) ? [Number(weight.dims[2] ?? 3), Number(weight.dims[3] ?? 3)] : [3, 3]
+      const params = createDefaultParams("Conv2d")
+      params.in_channels = inChannels
+      params.out_channels = outChannels
+      params.kernel_size = kernel
+      params.stride = (attrs.get("strides") as number[]) ?? params.stride
+      params.padding = (attrs.get("pads") as number[])?.slice(0, 2) ?? params.padding
+      params.dilation = (attrs.get("dilations") as number[]) ?? params.dilation
+      params.bias = (node.input?.length ?? 0) > 2
+      return { layerType: "Conv2d", params }
+    }
+    case "BatchNormalization": {
+      const scale = initializerMap.get(node.input?.[1] ?? "")
+      const features = Array.isArray(scale?.dims) ? Number(scale.dims[0]) : 32
+      const params = createDefaultParams("BatchNorm2d")
+      params.num_features = features
+      return { layerType: "BatchNorm2d", params }
+    }
+    case "Relu":
+      return { layerType: "ReLU", params: createDefaultParams("ReLU") }
+    case "Gelu":
+    case "GELU":
+      return { layerType: "GELU", params: createDefaultParams("GELU") }
+    case "MaxPool": {
+      const params = createDefaultParams("MaxPool2d")
+      params.kernel_size = (attrs.get("kernel_shape") as number[]) ?? params.kernel_size
+      params.stride = (attrs.get("strides") as number[]) ?? params.stride
+      params.padding = (attrs.get("pads") as number[])?.slice(0, 2) ?? params.padding
+      return { layerType: "MaxPool2d", params }
+    }
+    case "GlobalAveragePool":
+      return { layerType: "AdaptiveAvgPool2d", params: { ...createDefaultParams("AdaptiveAvgPool2d"), output_size: [1, 1] } }
+    case "Flatten":
+      return { layerType: "Flatten", params: createDefaultParams("Flatten") }
+    case "Gemm":
+    case "MatMul": {
+      const weight = initializerMap.get(node.input?.[1] ?? "")
+      const params = createDefaultParams("Linear")
+      if (Array.isArray(weight?.dims)) {
+        params.out_features = Number(weight.dims[0] ?? params.out_features)
+        params.in_features = Number(weight.dims[1] ?? params.in_features)
+      }
+      return { layerType: "Linear", params }
+    }
+    case "Dropout":
+      return { layerType: "Dropout", params: createDefaultParams("Dropout") }
+    case "Add":
+      return { layerType: "Add", params: createDefaultParams("Add") }
+    case "Concat":
+      return { layerType: "Concat", params: { ...createDefaultParams("Concat"), dim: (attrs.get("axis") as number) ?? 1 } }
+    case "LayerNormalization":
+      return { layerType: "LayerNorm", params: createDefaultParams("LayerNorm") }
+    case "Attention":
+    case "MultiHeadAttention": {
+      const params = createDefaultParams("SelfAttention")
+      return { layerType: "SelfAttention", params }
+    }
+    default:
+      return null
+  }
+}
+
+export function importOnnxBuffer(buffer: ArrayBuffer, layoutMode: GraphLayoutMode): NeuralGraph {
+  const model = onnxProto.onnx.ModelProto.decode(new Uint8Array(buffer)) as any
+  const graphProto = model.graph
+
+  if (!graphProto) {
+    throw new Error("Invalid ONNX model: missing graph.")
+  }
+
+  const initializerMap = new Map<string, any>((graphProto.initializer ?? []).map((tensor: any) => [tensor.name, tensor]))
+  const valueInfoMap = new Map<string, any>()
+  for (const item of [...(graphProto.input ?? []), ...(graphProto.valueInfo ?? []), ...(graphProto.output ?? [])]) {
+    valueInfoMap.set(item.name, item)
+  }
+
+  const nodes: LayerNode[] = []
+  const edges: GraphEdge[] = []
+  const tensorProducer = new Map<string, string>()
+  const createdNodeIds = new Set<string>()
+  const modelInputs = (graphProto.input ?? []).filter((input: any) => !initializerMap.has(input.name))
+
+  modelInputs.forEach((input: any, index: number) => {
+    const nodeId = `input_${input.name}`
+    nodes.push({
+      id: nodeId,
+      name: input.name,
+      layerType: "Input",
+      position: orientPosition(index, layoutMode),
+      params: {
+        ...createDefaultParams("Input"),
+        shape: shapeFromOnnx(input),
+        dtype: onnxDtypeToEditorDtype(input?.type?.tensorType?.elemType),
+      },
+    })
+    tensorProducer.set(input.name, nodeId)
+    createdNodeIds.add(nodeId)
+  })
+
+  let visualIndex = modelInputs.length
+
+  for (const onnxNode of graphProto.node ?? []) {
+    const mapped = mapOnnxNodeToLayer(onnxNode, initializerMap)
+    if (!mapped) {
+      continue
+    }
+
+    const baseName = onnxNode.name || onnxNode.output?.[0] || onnxNode.opType || `node_${visualIndex}`
+    const nodeId = `onnx_${baseName}_${visualIndex}`
+    nodes.push({
+      id: nodeId,
+      name: baseName,
+      layerType: mapped.layerType,
+      position: orientPosition(visualIndex, layoutMode),
+      params: mapped.params,
+    })
+    createdNodeIds.add(nodeId)
+
+    ;(onnxNode.input ?? []).forEach((tensorName: string, inputIndex: number) => {
+      if (!tensorName || initializerMap.has(tensorName)) {
+        return
+      }
+      const sourceNodeId = tensorProducer.get(tensorName)
+      if (!sourceNodeId) return
+
+      const targetPort =
+        mapped.layerType === "TransformerDecoder"
+          ? inputIndex === 0
+            ? "tgt"
+            : "memory"
+          : mapped.layerType === "Add" || mapped.layerType === "Concat"
+            ? inputIndex === 0
+              ? "a"
+              : "b"
+            : "in"
+
+      edges.push({
+        id: `e-${sourceNodeId}-${nodeId}-${targetPort}`,
+        fromNodeId: sourceNodeId,
+        fromPort: "out",
+        toNodeId: nodeId,
+        toPort: targetPort,
+      })
+    })
+
+    ;(onnxNode.output ?? []).forEach((tensorName: string) => {
+      if (tensorName) {
+        tensorProducer.set(tensorName, nodeId)
+      }
+    })
+
+    visualIndex += 1
+  }
+
+  const graphOutputs = graphProto.output ?? []
+  graphOutputs.forEach((output: any, index: number) => {
+    const sourceNodeId = tensorProducer.get(output.name)
+    if (!sourceNodeId) return
+    const nodeId = `output_${output.name}_${index}`
+    nodes.push({
+      id: nodeId,
+      name: output.name || `output_${index + 1}`,
+      layerType: "Output",
+      position: orientPosition(visualIndex + index, layoutMode),
+      params: createDefaultParams("Output"),
+    })
+    edges.push({
+      id: `e-${sourceNodeId}-${nodeId}-in`,
+      fromNodeId: sourceNodeId,
+      fromPort: "out",
+      toNodeId: nodeId,
+      toPort: "in",
+    })
+  })
+
+  if (nodes.length === 0) {
+    throw new Error("No supported ONNX nodes were found.")
+  }
 
   return {
     version: 1,

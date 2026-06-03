@@ -97,6 +97,73 @@ function helperCode(helpers: Set<string>): string[] {
     )
   }
 
+  if (helpers.has("ResNetBasicBlock")) {
+    blocks.push(
+      [
+        "class ResNetBasicBlock(nn.Module):",
+        "    def __init__(self, in_channels, out_channels, stride=1, use_projection=False):",
+        "        super().__init__()",
+        "        self.conv1 = nn.Conv2d(in_channels, out_channels, kernel_size=3, stride=stride, padding=1, bias=False)",
+        "        self.bn1 = nn.BatchNorm2d(out_channels)",
+        "        self.relu = nn.ReLU(inplace=True)",
+        "        self.conv2 = nn.Conv2d(out_channels, out_channels, kernel_size=3, stride=1, padding=1, bias=False)",
+        "        self.bn2 = nn.BatchNorm2d(out_channels)",
+        "        self.use_projection = use_projection or stride != 1 or in_channels != out_channels",
+        "        self.proj = nn.Identity() if not self.use_projection else nn.Sequential(",
+        "            nn.Conv2d(in_channels, out_channels, kernel_size=1, stride=stride, bias=False),",
+        "            nn.BatchNorm2d(out_channels),",
+        "        )",
+        "",
+        "    def forward(self, x):",
+        "        identity = self.proj(x)",
+        "        out = self.conv1(x)",
+        "        out = self.bn1(out)",
+        "        out = self.relu(out)",
+        "        out = self.conv2(out)",
+        "        out = self.bn2(out)",
+        "        out = out + identity",
+        "        out = self.relu(out)",
+        "        return out",
+      ].join("\n"),
+    )
+  }
+
+  if (helpers.has("ResNetBottleneck")) {
+    blocks.push(
+      [
+        "class ResNetBottleneck(nn.Module):",
+        "    def __init__(self, in_channels, bottleneck_channels, out_channels, stride=1, use_projection=False):",
+        "        super().__init__()",
+        "        self.conv1 = nn.Conv2d(in_channels, bottleneck_channels, kernel_size=1, bias=False)",
+        "        self.bn1 = nn.BatchNorm2d(bottleneck_channels)",
+        "        self.conv2 = nn.Conv2d(bottleneck_channels, bottleneck_channels, kernel_size=3, stride=stride, padding=1, bias=False)",
+        "        self.bn2 = nn.BatchNorm2d(bottleneck_channels)",
+        "        self.conv3 = nn.Conv2d(bottleneck_channels, out_channels, kernel_size=1, bias=False)",
+        "        self.bn3 = nn.BatchNorm2d(out_channels)",
+        "        self.relu = nn.ReLU(inplace=True)",
+        "        self.use_projection = use_projection or stride != 1 or in_channels != out_channels",
+        "        self.proj = nn.Identity() if not self.use_projection else nn.Sequential(",
+        "            nn.Conv2d(in_channels, out_channels, kernel_size=1, stride=stride, bias=False),",
+        "            nn.BatchNorm2d(out_channels),",
+        "        )",
+        "",
+        "    def forward(self, x):",
+        "        identity = self.proj(x)",
+        "        out = self.conv1(x)",
+        "        out = self.bn1(out)",
+        "        out = self.relu(out)",
+        "        out = self.conv2(out)",
+        "        out = self.bn2(out)",
+        "        out = self.relu(out)",
+        "        out = self.conv3(out)",
+        "        out = self.bn3(out)",
+        "        out = out + identity",
+        "        out = self.relu(out)",
+        "        return out",
+      ].join("\n"),
+    )
+  }
+
   if (helpers.has("PatchEmbedding2D")) {
     blocks.push(
       [
@@ -125,6 +192,12 @@ function moduleLine(node: LayerNode, moduleName: string, helpers: Set<string>): 
     case "ResidualBlock2d":
       helpers.add("ResidualBlock2D")
       return `self.${moduleName} = ResidualBlock2D(${node.params.in_channels}, ${node.params.out_channels}, stride=${node.params.stride}, use_projection=${pyBool(node.params.use_projection)})`
+    case "ResNetBasicBlock":
+      helpers.add("ResNetBasicBlock")
+      return `self.${moduleName} = ResNetBasicBlock(${node.params.in_channels}, ${node.params.out_channels}, stride=${node.params.stride}, use_projection=${pyBool(node.params.use_projection)})`
+    case "ResNetBottleneck":
+      helpers.add("ResNetBottleneck")
+      return `self.${moduleName} = ResNetBottleneck(${node.params.in_channels}, ${node.params.bottleneck_channels}, ${node.params.out_channels}, stride=${node.params.stride}, use_projection=${pyBool(node.params.use_projection)})`
     case "BatchNorm2d":
       return `self.${moduleName} = nn.BatchNorm2d(${node.params.num_features})`
     case "LayerNorm":
@@ -150,6 +223,8 @@ function moduleLine(node: LayerNode, moduleName: string, helpers: Set<string>): 
       return `self.${moduleName} = nn.LSTM(input_size=${node.params.input_size}, hidden_size=${node.params.hidden_size}, num_layers=${node.params.num_layers}, dropout=${node.params.dropout}, batch_first=${pyBool(node.params.batch_first)}, bidirectional=${pyBool(node.params.bidirectional)})`
     case "GRU":
       return `self.${moduleName} = nn.GRU(input_size=${node.params.input_size}, hidden_size=${node.params.hidden_size}, num_layers=${node.params.num_layers}, dropout=${node.params.dropout}, batch_first=${pyBool(node.params.batch_first)}, bidirectional=${pyBool(node.params.bidirectional)})`
+    case "SelfAttention":
+      return `self.${moduleName} = nn.MultiheadAttention(embed_dim=${node.params.embed_dim}, num_heads=${node.params.num_heads}, batch_first=${pyBool(node.params.batch_first)})`
     case "TransformerEncoder":
       return `self.${moduleName} = nn.TransformerEncoder(nn.TransformerEncoderLayer(d_model=${node.params.d_model}, nhead=${node.params.nhead}, dim_feedforward=${node.params.dim_feedforward}, dropout=${node.params.dropout}, activation="${node.params.activation}", batch_first=True), num_layers=${node.params.num_layers})`
     case "TransformerDecoder":
@@ -183,6 +258,8 @@ function operationLine(node: LayerNode, moduleName: string, outputVar: string, i
     case "LSTM":
     case "GRU":
       return node.params.return_sequences ? `${outputVar}, _ = self.${moduleName}(${inputVars[0]})` : `${outputVar}, _ = self.${moduleName}(${inputVars[0]})\n        ${outputVar} = ${outputVar}[:, -1] if ${pyBool(node.params.batch_first)} else ${outputVar}[-1]`
+    case "SelfAttention":
+      return `${outputVar}, _ = self.${moduleName}(${inputVars[0]}, ${inputVars[0]}, ${inputVars[0]}, need_weights=False)`
     case "TransformerDecoder":
       return `${outputVar} = self.${moduleName}(${inputVars[0]}, ${inputVars[1]})`
     default:

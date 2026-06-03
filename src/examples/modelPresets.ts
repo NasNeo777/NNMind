@@ -59,18 +59,60 @@ function makeResNet18Graph(): NeuralGraph {
       stride: [2, 2],
       padding: [1, 1],
     }),
-    makeNode("res1", "layer1_0", "ResidualBlock2d", 1040, 160, { in_channels: 64, out_channels: 64, stride: 1, use_projection: false }),
-    makeNode("res2", "layer1_1", "ResidualBlock2d", 1270, 160, { in_channels: 64, out_channels: 64, stride: 1, use_projection: false }),
-    makeNode("res3", "layer2_0", "ResidualBlock2d", 1500, 160, { in_channels: 64, out_channels: 128, stride: 2, use_projection: true }),
-    makeNode("res4", "layer2_1", "ResidualBlock2d", 1730, 160, { in_channels: 128, out_channels: 128, stride: 1, use_projection: false }),
-    makeNode("res5", "layer3_0", "ResidualBlock2d", 1960, 160, { in_channels: 128, out_channels: 256, stride: 2, use_projection: true }),
-    makeNode("res6", "layer3_1", "ResidualBlock2d", 2190, 160, { in_channels: 256, out_channels: 256, stride: 1, use_projection: false }),
-    makeNode("res7", "layer4_0", "ResidualBlock2d", 2420, 160, { in_channels: 256, out_channels: 512, stride: 2, use_projection: true }),
-    makeNode("res8", "layer4_1", "ResidualBlock2d", 2650, 160, { in_channels: 512, out_channels: 512, stride: 1, use_projection: false }),
+    makeNode("res1", "layer1_0", "ResNetBasicBlock", 1040, 160, { in_channels: 64, out_channels: 64, stride: 1, use_projection: false }),
+    makeNode("res2", "layer1_1", "ResNetBasicBlock", 1270, 160, { in_channels: 64, out_channels: 64, stride: 1, use_projection: false }),
+    makeNode("res3", "layer2_0", "ResNetBasicBlock", 1500, 160, { in_channels: 64, out_channels: 128, stride: 2, use_projection: true }),
+    makeNode("res4", "layer2_1", "ResNetBasicBlock", 1730, 160, { in_channels: 128, out_channels: 128, stride: 1, use_projection: false }),
+    makeNode("res5", "layer3_0", "ResNetBasicBlock", 1960, 160, { in_channels: 128, out_channels: 256, stride: 2, use_projection: true }),
+    makeNode("res6", "layer3_1", "ResNetBasicBlock", 2190, 160, { in_channels: 256, out_channels: 256, stride: 1, use_projection: false }),
+    makeNode("res7", "layer4_0", "ResNetBasicBlock", 2420, 160, { in_channels: 256, out_channels: 512, stride: 2, use_projection: true }),
+    makeNode("res8", "layer4_1", "ResNetBasicBlock", 2650, 160, { in_channels: 512, out_channels: 512, stride: 1, use_projection: false }),
     makeNode("resnet_gap", "avgpool", "AdaptiveAvgPool2d", 2880, 160, { output_size: [1, 1] }),
     makeNode("resnet_flatten", "flatten", "Flatten", 3090, 160),
     makeNode("resnet_fc", "fc", "Linear", 3280, 160, { in_features: 512, out_features: 1000 }),
     makeNode("resnet_output", "output", "Output", 3490, 160),
+  ]
+
+  return {
+    version: 1,
+    framework: "pytorch",
+    nodes,
+    edges: nodes.slice(0, -1).map((node, index) => makeEdge(node.id, nodes[index + 1].id)),
+  }
+}
+
+function makeResNet50Graph(): NeuralGraph {
+  const nodes: LayerNode[] = [
+    makeNode("res50_input", "image", "Input", 0, 160),
+    makeNode("res50_stem", "stem_conv", "Conv2d", 220, 160, {
+      in_channels: 3,
+      out_channels: 64,
+      kernel_size: [7, 7],
+      stride: [2, 2],
+      padding: [3, 3],
+      dilation: [1, 1],
+      bias: false,
+    }),
+    makeNode("res50_bn", "stem_bn", "BatchNorm2d", 430, 160, { num_features: 64 }),
+    makeNode("res50_relu", "stem_relu", "ReLU", 620, 160),
+    makeNode("res50_pool", "stem_pool", "MaxPool2d", 820, 160, {
+      kernel_size: [3, 3],
+      stride: [2, 2],
+      padding: [1, 1],
+    }),
+    makeNode("res50_l1_0", "layer1_0", "ResNetBottleneck", 1040, 160, { in_channels: 64, bottleneck_channels: 64, out_channels: 256, stride: 1, use_projection: true }),
+    makeNode("res50_l1_1", "layer1_1", "ResNetBottleneck", 1280, 160, { in_channels: 256, bottleneck_channels: 64, out_channels: 256, stride: 1, use_projection: false }),
+    makeNode("res50_l1_2", "layer1_2", "ResNetBottleneck", 1520, 160, { in_channels: 256, bottleneck_channels: 64, out_channels: 256, stride: 1, use_projection: false }),
+    makeNode("res50_l2_0", "layer2_0", "ResNetBottleneck", 1760, 160, { in_channels: 256, bottleneck_channels: 128, out_channels: 512, stride: 2, use_projection: true }),
+    makeNode("res50_l2_1", "layer2_1", "ResNetBottleneck", 2000, 160, { in_channels: 512, bottleneck_channels: 128, out_channels: 512, stride: 1, use_projection: false }),
+    makeNode("res50_l3_0", "layer3_0", "ResNetBottleneck", 2240, 160, { in_channels: 512, bottleneck_channels: 256, out_channels: 1024, stride: 2, use_projection: true }),
+    makeNode("res50_l3_1", "layer3_1", "ResNetBottleneck", 2480, 160, { in_channels: 1024, bottleneck_channels: 256, out_channels: 1024, stride: 1, use_projection: false }),
+    makeNode("res50_l4_0", "layer4_0", "ResNetBottleneck", 2720, 160, { in_channels: 1024, bottleneck_channels: 512, out_channels: 2048, stride: 2, use_projection: true }),
+    makeNode("res50_l4_1", "layer4_1", "ResNetBottleneck", 2960, 160, { in_channels: 2048, bottleneck_channels: 512, out_channels: 2048, stride: 1, use_projection: false }),
+    makeNode("res50_gap", "avgpool", "AdaptiveAvgPool2d", 3200, 160, { output_size: [1, 1] }),
+    makeNode("res50_flatten", "flatten", "Flatten", 3410, 160),
+    makeNode("res50_fc", "fc", "Linear", 3620, 160, { in_features: 2048, out_features: 1000 }),
+    makeNode("res50_output", "output", "Output", 3830, 160),
   ]
 
   return {
@@ -224,8 +266,15 @@ export const modelPresets: GraphPreset[] = [
     id: "resnet18",
     title: "ResNet-18",
     family: "Classic CNN",
-    description: "使用 ResidualBlock2d 组合出的经典残差网络骨架。",
+    description: "使用 ResNet BasicBlock 组合出的经典残差网络骨架。",
     graph: makeResNet18Graph(),
+  },
+  {
+    id: "resnet50",
+    title: "ResNet-50",
+    family: "Classic CNN",
+    description: "使用 ResNet Bottleneck 组合出的更深残差网络骨架。",
+    graph: makeResNet50Graph(),
   },
   {
     id: "vgg16",

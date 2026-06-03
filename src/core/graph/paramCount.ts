@@ -64,6 +64,33 @@ export function estimateNodeParamCount(node: LayerNode): number {
       const projection = useProjection ? outChannels * inChannels + outChannels * 2 : 0
       return conv1 + bn1 + conv2 + bn2 + projection
     }
+    case "ResNetBasicBlock": {
+      const inChannels = asNumber(node.params.in_channels, 64)
+      const outChannels = asNumber(node.params.out_channels, 64)
+      const stride = asNumber(node.params.stride, 1)
+      const useProjection = asBoolean(node.params.use_projection, false) || stride !== 1 || inChannels !== outChannels
+      const conv1 = outChannels * inChannels * 3 * 3
+      const bn1 = outChannels * 2
+      const conv2 = outChannels * outChannels * 3 * 3
+      const bn2 = outChannels * 2
+      const projection = useProjection ? outChannels * inChannels + outChannels * 2 : 0
+      return conv1 + bn1 + conv2 + bn2 + projection
+    }
+    case "ResNetBottleneck": {
+      const inChannels = asNumber(node.params.in_channels, 256)
+      const bottleneck = asNumber(node.params.bottleneck_channels, 64)
+      const outChannels = asNumber(node.params.out_channels, 256)
+      const stride = asNumber(node.params.stride, 1)
+      const useProjection = asBoolean(node.params.use_projection, false) || stride !== 1 || inChannels !== outChannels
+      const conv1 = inChannels * bottleneck
+      const bn1 = bottleneck * 2
+      const conv2 = bottleneck * bottleneck * 3 * 3
+      const bn2 = bottleneck * 2
+      const conv3 = bottleneck * outChannels
+      const bn3 = outChannels * 2
+      const projection = useProjection ? inChannels * outChannels + outChannels * 2 : 0
+      return conv1 + bn1 + conv2 + bn2 + conv3 + bn3 + projection
+    }
     case "BatchNorm2d":
       return asNumber(node.params.num_features, 32) * 2
     case "LayerNorm":
@@ -84,6 +111,10 @@ export function estimateNodeParamCount(node: LayerNode): number {
       return countRnnParams(node, 4)
     case "GRU":
       return countRnnParams(node, 3)
+    case "SelfAttention": {
+      const dModel = asNumber(node.params.embed_dim, 512)
+      return 4 * dModel * dModel + 4 * dModel
+    }
     case "TransformerEncoder": {
       const dModel = asNumber(node.params.d_model, 512)
       const ff = asNumber(node.params.dim_feedforward, 2048)

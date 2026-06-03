@@ -23,7 +23,7 @@ export function ExportPanel({
     <section className="panel export-panel">
       <div className="panel__header">
         <h2>Export & Import</h2>
-        <p>支持导出 Graph JSON / PyTorch，也支持导入 Graph JSON 或常见 PyTorch `.py` 模型文件。</p>
+        <p>支持导出 Graph JSON / PyTorch，也支持导入 Graph JSON、PyTorch `.py/.txt`，以及 ONNX `.onnx/.pb` 模型文件。</p>
       </div>
 
       <div className="export-actions">
@@ -39,7 +39,7 @@ export function ExportPanel({
         <label className="file-action">
           <input
             type="file"
-            accept=".json,.py,.txt"
+            accept=".json,.py,.txt,.onnx,.pb"
             onChange={(event) => {
               const file = event.target.files?.[0]
               if (file) {

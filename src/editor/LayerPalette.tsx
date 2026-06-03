@@ -11,9 +11,10 @@ type LayerPaletteProps = {
 export function LayerPalette({ onAddLayer, selectedNodeName }: LayerPaletteProps) {
   const [query, setQuery] = useState("")
 
-  const filteredGroups = useMemo(() => {
+  const filteredLayers = useMemo(() => {
     const keyword = query.trim().toLowerCase()
-    const filtered = keyword
+
+    return keyword
       ? layerLibrary.filter(
           (layer) =>
             layer.label.toLowerCase().includes(keyword) ||
@@ -22,48 +23,33 @@ export function LayerPalette({ onAddLayer, selectedNodeName }: LayerPaletteProps
             layer.description.toLowerCase().includes(keyword),
         )
       : layerLibrary
-
-    return Object.entries(
-      filtered.reduce<Record<string, typeof filtered>>((groups, layer) => {
-        if (!groups[layer.category]) {
-          groups[layer.category] = []
-        }
-        groups[layer.category].push(layer)
-        return groups
-      }, {}),
-    )
   }, [query])
 
   return (
-    <section className="panel palette-panel">
-      <div className="panel__header">
-        <h2>Layer Palette</h2>
-        <p>{selectedNodeName ? `选中 ${selectedNodeName} 后，新节点会尽量插到它后面。` : "搜索并添加节点；选中节点后会优先插到该节点后面。"}</p>
+    <section className="panel quick-add-panel">
+      <div className="quick-add-header">
+        <div className="panel__header">
+          <h2>Quick Add</h2>
+          <p>{selectedNodeName ? `选中 ${selectedNodeName} 后，新节点会插到它后面。` : "先选一个节点，再从这里横向快速加入常用模块。"}</p>
+        </div>
+        <label className="field quick-add-search">
+          <span>Search</span>
+          <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="conv, bottleneck, attention, lstm..." />
+        </label>
       </div>
-      <label className="field">
-        <span>Search</span>
-        <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="conv, transformer, lstm..." />
-      </label>
-      <div className="palette-groups">
-        {filteredGroups.map(([groupName, layers]) => (
-          <section key={groupName} className="palette-group">
-            <div className="palette-group__title">{groupName}</div>
-            <div className="palette-grid">
-              {layers.map((layer) => (
-                <button
-                  key={layer.type}
-                  type="button"
-                  className="palette-card"
-                  onClick={() => onAddLayer(layer.type)}
-                  style={{ "--accent": layer.accent } as CSSProperties}
-                >
-                  <span className="palette-card__label">{layer.label}</span>
-                  <span className="palette-card__meta">{layer.category}</span>
-                  <span className="palette-card__hint">{layer.description}</span>
-                </button>
-              ))}
-            </div>
-          </section>
+      <div className="quick-add-row">
+        {filteredLayers.map((layer) => (
+          <button
+            key={layer.type}
+            type="button"
+            className="quick-add-card"
+            onClick={() => onAddLayer(layer.type)}
+            style={{ "--accent": layer.accent } as CSSProperties}
+            title={layer.description}
+          >
+            <span className="quick-add-card__label">{layer.label}</span>
+            <span className="quick-add-card__meta">{layer.category}</span>
+          </button>
         ))}
       </div>
     </section>

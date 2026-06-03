@@ -153,6 +153,43 @@ function inferResidualBlock2d(node: LayerNode, input: TensorSpec): TensorSpec {
   }
 }
 
+function inferResNetBasicBlock(node: LayerNode, input: TensorSpec): TensorSpec {
+  return inferResidualBlock2d(node, input)
+}
+
+function inferResNetBottleneck(node: LayerNode, input: TensorSpec): TensorSpec {
+  if (input.shape.length !== 4) {
+    throw new Error("ResNetBottleneck 需要 4D Tensor。")
+  }
+
+  const [batch, channels, height, width] = input.shape
+  const inChannels = asNumber(node.params.in_channels, 256)
+  const bottleneckChannels = asNumber(node.params.bottleneck_channels, 64)
+  const outChannels = asNumber(node.params.out_channels, 256)
+  const stride = asNumber(node.params.stride, 1)
+  const useProjection = asBoolean(node.params.use_projection, false)
+
+  void bottleneckChannels
+
+  if (channels !== inChannels) {
+    throw new Error(`ResNetBottleneck 输入通道不匹配: 需要 ${inChannels}, 实际 ${String(channels)}`)
+  }
+
+  if (!useProjection && inChannels !== outChannels && stride === 1) {
+    throw new Error("ResNetBottleneck 若不使用 projection，输入输出通道必须一致。")
+  }
+
+  return {
+    dtype: input.dtype,
+    shape: [
+      batch,
+      outChannels,
+      typeof height === "number" ? Math.floor(height / stride) : null,
+      typeof width === "number" ? Math.floor(width / stride) : null,
+    ],
+  }
+}
+
 function inferBatchNorm2d(node: LayerNode, input: TensorSpec): TensorSpec {
   if (input.shape.length !== 4) {
     throw new Error("BatchNorm2d 需要 4D Tensor。")
@@ -368,6 +405,19 @@ function inferTransformerEncoder(node: LayerNode, input: TensorSpec): TensorSpec
   return input
 }
 
+function inferSelfAttention(node: LayerNode, input: TensorSpec): TensorSpec {
+  if (input.shape.length !== 3) {
+    throw new Error("SelfAttention 需要 3D token 序列。")
+  }
+
+  const embedDim = asNumber(node.params.embed_dim, 512)
+  if (input.shape[2] !== embedDim) {
+    throw new Error(`SelfAttention embed_dim 不匹配: 需要 ${embedDim}, 实际 ${String(input.shape[2])}`)
+  }
+
+  return input
+}
+
 function inferTransformerDecoder(node: LayerNode, tgt: TensorSpec, memory: TensorSpec): TensorSpec {
   if (tgt.shape.length !== 3 || memory.shape.length !== 3) {
     throw new Error("TransformerDecoder 需要 3D target 与 memory。")
@@ -469,6 +519,10 @@ function inferNode(node: LayerNode, inputSpecs: Array<TensorSpec | null>): Tenso
       return [inferConv2d(node, expectInput(inputSpecs[0], node.name))]
     case "ResidualBlock2d":
       return [inferResidualBlock2d(node, expectInput(inputSpecs[0], node.name))]
+    case "ResNetBasicBlock":
+      return [inferResNetBasicBlock(node, expectInput(inputSpecs[0], node.name))]
+    case "ResNetBottleneck":
+      return [inferResNetBottleneck(node, expectInput(inputSpecs[0], node.name))]
     case "BatchNorm2d":
       return [inferBatchNorm2d(node, expectInput(inputSpecs[0], node.name))]
     case "LayerNorm":
@@ -494,6 +548,8 @@ function inferNode(node: LayerNode, inputSpecs: Array<TensorSpec | null>): Tenso
       return [inferRecurrent(node, expectInput(inputSpecs[0], node.name), "LSTM")]
     case "GRU":
       return [inferRecurrent(node, expectInput(inputSpecs[0], node.name), "GRU")]
+    case "SelfAttention":
+      return [inferSelfAttention(node, expectInput(inputSpecs[0], node.name))]
     case "TransformerEncoder":
       return [inferTransformerEncoder(node, expectInput(inputSpecs[0], node.name))]
     case "TransformerDecoder":

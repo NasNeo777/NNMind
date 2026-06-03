@@ -129,12 +129,12 @@ button {
 
 .workspace-grid {
   display: grid;
-  grid-template-columns: 280px minmax(700px, 1fr) 360px;
+  grid-template-columns: minmax(0, 1fr) 360px;
   gap: 1rem;
   align-items: start;
 }
 
-.left-stack,
+.main-stack,
 .side-stack {
   display: grid;
   gap: 1rem;
@@ -156,29 +156,6 @@ button {
 .panel__header,
 .canvas-panel__header {
   margin-bottom: 1rem;
-}
-
-.palette-grid {
-  display: grid;
-  gap: 0.75rem;
-}
-
-.palette-groups {
-  display: grid;
-  gap: 1rem;
-}
-
-.palette-group {
-  display: grid;
-  gap: 0.65rem;
-}
-
-.palette-group__title {
-  color: #526277;
-  font-size: 0.76rem;
-  font-family: "IBM Plex Mono", monospace;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
 }
 
 .preset-grid {
@@ -210,30 +187,48 @@ button {
   text-align: left;
 }
 
-.palette-card {
+.quick-add-panel {
+  display: grid;
+  gap: 0.85rem;
+}
+
+.quick-add-header {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 340px;
+  gap: 1rem;
+  align-items: end;
+}
+
+.quick-add-search {
+  margin-bottom: 0;
+}
+
+.quick-add-row {
+  display: flex;
+  gap: 0.75rem;
+  overflow-x: auto;
+  padding-bottom: 0.3rem;
+}
+
+.quick-add-card {
+  min-width: 150px;
   display: grid;
   gap: 0.2rem;
   justify-items: start;
-  padding: 0.9rem 1rem;
+  padding: 0.85rem 0.95rem;
   border: 1px solid color-mix(in srgb, var(--accent) 40%, white);
   background: linear-gradient(135deg, color-mix(in srgb, var(--accent) 8%, white), white);
   color: #0f172a;
 }
 
-.palette-card__label {
+.quick-add-card__label {
   font-weight: 700;
 }
 
-.palette-card__meta {
+.quick-add-card__meta {
   color: #526277;
-  font-size: 0.82rem;
+  font-size: 0.78rem;
   text-transform: capitalize;
-}
-
-.palette-card__hint {
-  color: #526277;
-  font-size: 0.8rem;
-  text-align: left;
 }
 
 .canvas-panel {
@@ -466,6 +461,10 @@ button {
   }
 
   .topbar {
+    grid-template-columns: 1fr;
+  }
+
+  .quick-add-header {
     grid-template-columns: 1fr;
   }
 
