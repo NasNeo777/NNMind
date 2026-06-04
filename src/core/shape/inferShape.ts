@@ -123,7 +123,7 @@ function inferResidualBlock2d(node: LayerNode, input: TensorSpec): TensorSpec {
     throw new Error("ResidualBlock2d 需要 4D Tensor。")
   }
 
-  const [batch, channels, height, width] = input.shape
+  const [batch, , height, width] = input.shape
   const outChannels = asNumber(node.params.out_channels, 64)
   const stride = asNumber(node.params.stride, 1)
 

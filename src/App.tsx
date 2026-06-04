@@ -780,8 +780,8 @@ export default function App() {
                 <div
                   className="inspector-popup"
                   style={{
-                    left: inspectorPopup.position.x,
-                    top: inspectorPopup.position.y,
+                    left: inspectorPopup!.position.x,
+                    top: inspectorPopup!.position.y,
                   }}
                 >
                   <div className="inspector-popup__header">
