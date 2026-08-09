@@ -15,7 +15,7 @@
   },
   "dependencies": {
     "@xyflow/react": "^12.11.0",
-    "nanoid": "^5.1.11",
+    "nanoid": "^5.1.16",
     "onnx-proto": "^8.0.1",
     "react": "^19.2.6",
     "react-dom": "^19.2.6"
